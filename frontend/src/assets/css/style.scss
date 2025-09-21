@@ -1,0 +1,116 @@
+$primary-color: #0f172a;
+$secondary-color: yellow;
+$text-color: #ddd;
+$search-width: 200px;
+$login-width: 100px;
+$total-right-width: $search-width+$login-width+20px; // +20px for gaps
+$button-min-width: 120px;
+$button-max-width: 150px;
+$border-radius: 4px;
+$hover-bg: rgba(0, 0, 0, 0.1);
+$hover-border: rgba(0, 0, 0, 0.2);
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+body {
+    font-family: "Roboto Mono", monospace;
+}
+
+h1 {
+    font-size: 4.5em;
+}
+
+h2 {
+    font-size: 3em;
+}
+
+h3 {
+    font-size: 2em;
+}
+
+p {
+    font-size: 1.2em;
+}
+
+.site-header {
+    background: #fff;
+    padding: 0.5rem 0;
+
+    &__container {
+        display: flex;
+        align-items: center;
+    }
+
+    &__navbar {
+        width: 100%;
+    }
+
+    &__brand {
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+
+    &__actions {
+        flex-grow: 1;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    &__btn {
+        min-width: 120px;
+        transition: 0.3s ease;
+
+        &:hover {
+            background: #007bff;
+            color: #fff;
+        }
+    }
+
+    &__right {
+        margin-left: auto;
+    }
+
+    &__utilities {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    &__search {
+        .input-group {
+            width: 220px;
+        }
+    }
+
+    &__search-input {
+        border: 1px solid #ccc;
+        border-right: none; // bỏ border phải để liền với nút
+        border-radius: 20px 0 0 20px;
+        box-shadow: none;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    &__search-btn {
+        background-color: #ffffff;
+        border: 1px solid #ccc;
+        border-left: none; // bỏ border trái để liền với input
+        border-radius: 0 20px 20px 0;
+        color: #666;
+        transition: all 0.3s ease;
+
+        &:hover {
+            color: #000;
+            border-color: #ccc;
+        }
+    }
+
+    &__login {
+        min-width: 100px;
+        text-align: center;
+    }
+
+    &__lang {
+        .dropdown-toggle {
+            font-size: 0.85rem;
+        }
+    }
+}
