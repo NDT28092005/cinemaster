@@ -2,13 +2,11 @@ import React from 'react'
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { useNavigate } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
-const Home = () => {
+const Header = () => {
     const navigate = useNavigate();
     return (
         <header className="site-header hd">
@@ -112,4 +110,4 @@ const Home = () => {
     )
 }
 
-export default Home
+export default Header
