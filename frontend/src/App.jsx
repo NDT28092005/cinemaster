@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import Home from './components/frontend/Home';
-import About from './components/frontend/About';
+import Home from './components/frontend/pages/Home';
+import About from './components/frontend/pages/About';
 import './assets/css/style.scss'
 import Login from './components/backend/Login';
 import Dashboard from './components/backend/Dashboard';
