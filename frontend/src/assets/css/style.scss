@@ -22,6 +22,7 @@ p { font-size: 1.2em; }
 // Main header container
 .hd {
     background-color: #0f172a;
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
@@ -194,41 +195,6 @@ p { font-size: 1.2em; }
                 background-color: lighten($secondary-color, 10%);
                 border-color: lighten($secondary-color, 10%);
             }
-        }
-    }
-}
-// Responsive design
-@media (max-width: 991px) {
-    .hd-bot {
-        .container {
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .navbar-collapse {
-            justify-content: center;
-            
-            .nav {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 1rem;
-            }
-        }
-    }
-    
-    .site-header {
-        &__actions {
-            flex-direction: column;
-            margin: 1rem 0;
-        }
-        
-        &__utilities {
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        &__search .input-group {
-            width: 100%;
         }
     }
 }

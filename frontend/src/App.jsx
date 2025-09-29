@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import Home from './components/frontend/home';
+import Home from './components/frontend/Home';
 import About from './components/frontend/About';
 import './assets/css/style.scss'
+import Login from './components/backend/Login';
+import Dashboard from './components/backend/Dashboard';
 function App() {
   return (
     <>
@@ -13,7 +13,8 @@ function App() {
         <Routes>
           <Route path='/' element={<Home/>}/>
           <Route path='/about' element={<About/>}/>
-
+          <Route path='/admin/login' element={<Login/>}/>
+          <Route path='/admin/dashboard' element={<Dashboard/>}/>
         </Routes>
       </BrowserRouter>
     </>
