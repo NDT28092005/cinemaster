@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Form from 'react-bootstrap/Form';
@@ -10,8 +10,20 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import { FaSearch } from "react-icons/fa";
 const Header = () => {
     const navigate = useNavigate();
+    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+    const [scrolled, setScrolled] = useState(false);
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 10);
+        onScroll();
+        window.addEventListener('scroll', onScroll);
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
     return (
-        <header className="site-header hd">
+        <header className={`site-header hd${scrolled ? ' is-scrolled' : ''}`}>
             <div className='hd-above'>
                 <div className="container site-header__container">
                     <Navbar expand="lg" className="site-header__navbar">
@@ -65,6 +77,9 @@ const Header = () => {
                                         <Dropdown.Item href="#/action-1">ENG</Dropdown.Item>
                                     </Dropdown.Menu>
                                 </Dropdown>
+                                <button className="btn site-header__btn" onClick={() => setTheme(theme === 'dark' ? 'purple' : 'dark')}>
+                                    {theme === 'dark' ? 'Purple' : 'Dark'}
+                                </button>
                             </div>
                         </Navbar.Collapse>
                     </Navbar>
