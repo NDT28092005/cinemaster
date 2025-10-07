@@ -16,5 +16,5 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     //Protected Routes
     Route::get('dashboard',[DashboardController::class,'index']);
     Route::get('logout',[AuthenticationController::class,'logout']);
-
+    
 });
