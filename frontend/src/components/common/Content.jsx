@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState } from 'react';
 import Carousel from 'react-bootstrap/Carousel';
-import img1 from "../../../goal1.jpeg"
+import img1 from '../../assets/images/goal1.jpeg'
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PosterSlider from './PosterSlider';
 import { moviesNow, moviesSoon, promos, services } from './data';
