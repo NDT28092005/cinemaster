@@ -112,6 +112,8 @@ return new class extends Migration
             $table->string('sound_system', 100)->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('created_at')->useCurrent();
+            $table->string('screen_size', 50)->nullable(); // Kích thước màn hình
+            $table->text('description')->nullable();
             $table->foreign('cinema_id')->references('id')->on('cinemas')->onDelete('cascade');
         });
 
@@ -159,6 +161,9 @@ return new class extends Migration
 
         if (!Schema::hasTable('movies')) {
             Schema::create('movies', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
                 $table->char('id', 36)->primary();
                 $table->string('title', 255);
                 $table->string('original_title', 255)->nullable();
@@ -171,7 +176,7 @@ return new class extends Migration
                 $table->string('language', 50)->nullable();
                 $table->string('subtitle_language', 50)->nullable();
                 $table->string('rating', 20)->nullable();
-                $table->enum('age_rating', ['P','K','T13','T16','C18'])->nullable();
+                $table->enum('age_rating', ['P', 'K', 'T13', 'T16', 'C18'])->nullable();
                 $table->text('poster_url')->nullable();
                 $table->text('banner_url')->nullable();
                 $table->text('trailer_url')->nullable();
@@ -180,7 +185,7 @@ return new class extends Migration
                 $table->text('synopsis')->nullable();
                 $table->date('release_date')->nullable();
                 $table->date('end_date')->nullable();
-                $table->enum('status', ['coming_soon','now_showing','archived'])->default('coming_soon');
+                $table->enum('status', ['coming_soon', 'now_showing', 'archived'])->default('coming_soon');
                 $table->decimal('imdb_rating', 3, 1)->nullable();
                 $table->integer('view_count')->default(0);
                 $table->boolean('is_featured')->default(false);
@@ -195,6 +200,10 @@ return new class extends Migration
             $table->char('id', 36)->primary();
             $table->char('movie_id', 36);
             $table->char('genre_id', 36);
+
+            $table->charset = 'utf8mb4';
+            $table->collation = 'utf8mb4_unicode_ci';
+
             $table->foreign('movie_id')->references('id')->on('movies')->onDelete('cascade');
             $table->foreign('genre_id')->references('id')->on('genres')->onDelete('cascade');
         });
@@ -217,7 +226,7 @@ return new class extends Migration
             $table->char('cinema_id', 36)->nullable();
             $table->char('auditorium_id', 36)->nullable();
             $table->char('movie_id', 36)->nullable();
-            $table->enum('day_of_week', ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'])->nullable();
+            $table->enum('day_of_week', ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])->nullable();
             $table->time('time_start')->nullable();
             $table->time('time_end')->nullable();
             $table->decimal('price_modifier', 8, 2)->default(0.00);
@@ -241,7 +250,7 @@ return new class extends Migration
             $table->decimal('base_price', 10, 2);
             $table->integer('capacity')->nullable();
             $table->integer('available_seats')->nullable();
-            $table->enum('status', ['scheduled','cancelled','finished','sold_out'])->default('scheduled');
+            $table->enum('status', ['scheduled', 'cancelled', 'finished', 'sold_out'])->default('scheduled');
             $table->boolean('is_3d')->default(false);
             $table->boolean('is_imax')->default(false);
             $table->timestamp('created_at')->useCurrent();
@@ -256,7 +265,7 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('name', 255)->nullable();
             $table->text('description')->nullable();
-            $table->enum('discount_type', ['percentage','fixed_amount','buy_x_get_y'])->nullable();
+            $table->enum('discount_type', ['percentage', 'fixed_amount', 'buy_x_get_y'])->nullable();
             $table->decimal('discount_value', 10, 2)->nullable();
             $table->decimal('min_amount', 10, 2)->nullable();
             $table->decimal('max_discount', 10, 2)->nullable();
@@ -291,7 +300,7 @@ return new class extends Migration
             $table->decimal('discount_amount', 10, 2)->default(0.00);
             $table->decimal('final_amount', 12, 2);
             $table->dateTime('payment_due')->nullable();
-            $table->enum('status', ['pending','paid','cancelled','refunded','expired'])->default('pending');
+            $table->enum('status', ['pending', 'paid', 'cancelled', 'refunded', 'expired'])->default('pending');
             $table->string('payment_method', 50)->nullable();
             $table->text('notes')->nullable();
             $table->timestamp('created_at')->useCurrent();
@@ -324,7 +333,7 @@ return new class extends Migration
             $table->char('booking_id', 36);
             $table->decimal('amount', 12, 2)->nullable();
             $table->string('method', 50)->nullable();
-            $table->enum('status', ['initiated','success','failed','refunded','cancelled'])->nullable();
+            $table->enum('status', ['initiated', 'success', 'failed', 'refunded', 'cancelled'])->nullable();
             $table->string('provider', 50)->nullable();
             $table->string('provider_ref', 255)->nullable();
             $table->string('transaction_id', 255)->nullable();
@@ -378,7 +387,7 @@ return new class extends Migration
         Schema::create('notification_templates', function (Blueprint $table) {
             $table->char('id', 36)->primary();
             $table->string('name', 100)->nullable();
-            $table->enum('type', ['email','sms','push','in_app'])->nullable();
+            $table->enum('type', ['email', 'sms', 'push', 'in_app'])->nullable();
             $table->string('subject', 255)->nullable();
             $table->text('content')->nullable();
             $table->json('variables')->nullable();
@@ -391,7 +400,7 @@ return new class extends Migration
             $table->char('template_id', 36)->nullable();
             $table->string('title', 255)->nullable();
             $table->text('content')->nullable();
-            $table->enum('type', ['booking','promotion','system','payment'])->nullable();
+            $table->enum('type', ['booking', 'promotion', 'system', 'payment'])->nullable();
             $table->boolean('is_read')->default(false);
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
@@ -438,7 +447,7 @@ return new class extends Migration
             $table->char('id', 36)->primary();
             $table->string('setting_key', 100)->unique();
             $table->text('setting_value')->nullable();
-            $table->enum('data_type', ['string','number','boolean','json'])->nullable();
+            $table->enum('data_type', ['string', 'number', 'boolean', 'json'])->nullable();
             $table->text('description')->nullable();
             $table->boolean('is_public')->default(false);
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
@@ -446,7 +455,7 @@ return new class extends Migration
 
         Schema::create('system_logs', function (Blueprint $table) {
             $table->char('id', 36)->primary();
-            $table->enum('level', ['info','warning','error','debug'])->nullable();
+            $table->enum('level', ['info', 'warning', 'error', 'debug'])->nullable();
             $table->text('message')->nullable();
             $table->json('context')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
@@ -494,5 +503,3 @@ return new class extends Migration
         Schema::dropIfExists('roles');
     }
 };
-
-
