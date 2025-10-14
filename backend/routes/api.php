@@ -7,8 +7,31 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\Api\MovieController;
+use App\Http\Controllers\Api\ShowtimeController;
+use App\Http\Controllers\Admin\Auth\AdminAuthController;
 
+Route::prefix('movies')->group(function () {
+    Route::get('/', [MovieController::class, 'index']);        // Danh sách phim
+    Route::get('/{id}', [MovieController::class, 'show']);     // Chi tiết phim
+    Route::post('/', [MovieController::class, 'store']);       // Thêm phim
+    Route::put('/{id}', [MovieController::class, 'update']);   // Cập nhật
+    Route::delete('/{id}', [MovieController::class, 'destroy']); // Xóa
+});
+
+Route::prefix('showtimes')->group(function () {
+    Route::get('/', [ShowtimeController::class, 'index']);
+    Route::get('/{id}', [ShowtimeController::class, 'show']);
+    Route::post('/', [ShowtimeController::class, 'store']);
+    Route::put('/{id}', [ShowtimeController::class, 'update']);
+    Route::delete('/{id}', [ShowtimeController::class, 'destroy']);
+});
+
+Route::post('/admin/login', [AdminAuthController::class, 'login']);
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', [DashboardController::class, 'index']);
+});
+Route::middleware('auth:sanctum')->get('/admin/me', [AdminAuthController::class, 'me']);
 // -------------------------
 // Public Routes
 // -------------------------
@@ -41,7 +64,6 @@ Route::post('/email/verify', function (Request $request) {
 // Protected Routes (yêu cầu login)
 // -------------------------
 Route::group(['middleware' => ['auth:sanctum']], function() {
-    Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/me', [AuthenticationController::class, 'me']);
     Route::get('/logout', [AuthenticationController::class, 'logout']);
 });
