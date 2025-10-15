@@ -2,42 +2,37 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Str;
 
 class Showtime extends Model
 {
-    use HasFactory;
-
-    protected $table = 'showtimes';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    public $timestamps = false;
     protected $fillable = [
-        'movie_id',
-        'cinema_id',
-        'auditorium_id',
-        'start_time',
-        'end_time',
-        'format',
-        'language',
-        'base_price',
-        'capacity',
-        'available_seats',
-        'status',
-        'is_3d',
-        'is_imax',
+        'movie_id', 'cinema_id', 'auditorium_id', 
+        'start_time', 'end_time', 'base_price', 'format', 'language', 'status'
     ];
+    protected static function boot()
+    {
+        parent::boot();
 
-    public $timestamps = true;
-
-    // Relations
+        static::creating(function ($model) {
+            if (!$model->id) {
+                $model->id = (string) Str::uuid(); // tự sinh UUID
+            }
+        });
+    }
     public function movie() {
-        return $this->belongsTo(Movie::class);
+        return $this->belongsTo(Movie::class, 'movie_id');
     }
 
     public function cinema() {
-        return $this->belongsTo(Cinema::class);
+        return $this->belongsTo(Cinema::class, 'cinema_id');
     }
 
     public function auditorium() {
-        return $this->belongsTo(Auditorium::class);
+        return $this->belongsTo(Auditorium::class, 'auditorium_id');
     }
 }
