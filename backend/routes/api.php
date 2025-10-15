@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MovieController;
 use App\Http\Controllers\Api\ShowtimeController;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
+use App\Http\Controllers\Api\GenreController;
+use App\Http\Controllers\Api\CountryController;
+
+Route::get('/genres', [GenreController::class, 'index']);
+Route::post('/genres', [GenreController::class, 'store']);
+
+Route::get('/countries', [CountryController::class, 'index']);
+Route::post('/countries', [CountryController::class, 'store']);
 
 Route::prefix('movies')->group(function () {
     Route::get('/', [MovieController::class, 'index']);        // Danh sách phim
