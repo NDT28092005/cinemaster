@@ -21,7 +21,7 @@ class MovieController extends Controller
         }
 
         $movies = $query->with('showtimes')->get();
-
+        $movies = Movie::with(['genre', 'country'])->get();
         return response()->json($movies);
     }
 
@@ -37,8 +37,8 @@ class MovieController extends Controller
             'director' => 'nullable|string|max:255',
             'cast' => 'nullable|string',
             'language' => 'nullable|string|max:50',
-            'poster_url' => 'nullable|string',
-            'banner_url' => 'nullable|string',
+            'poster_url' => 'nullable|image|max:2048',
+            'banner_url' => 'nullable|image|max:4096',
             'trailer_url' => 'nullable|string',
             'description' => 'nullable|string',
             'release_date' => 'nullable|date',
@@ -48,7 +48,16 @@ class MovieController extends Controller
             'genre_id' => 'nullable|exists:genres,id',
             'country_id' => 'nullable|exists:countries,id',
         ]);
-
+        if ($request->hasFile('poster_url')) {
+            $poster = $request->file('poster_url');
+            $posterPath = $poster->store('posters', 'public'); // lưu vào storage/app/public/posters
+            $validated['poster_url'] = '/storage/' . $posterPath;
+        }
+        if ($request->hasFile('banner_url')) {
+            $banner = $request->file('banner_url');
+            $bannerPath = $banner->store('banners', 'public');
+            $validated['banner_url'] = '/storage/' . $bannerPath;
+        }
         // Nếu không có slug, tự động sinh từ title
         $validated['slug'] = $validated['slug'] ?? Str::slug($validated['title']);
         $validated['id'] = (string) Str::uuid();

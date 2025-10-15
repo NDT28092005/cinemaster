@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -12,9 +13,22 @@ class Movie extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id',
-        'title', 'slug', 'duration_min', 'director', 'cast', 'language',
-        'poster_url', 'banner_url', 'trailer_url', 'description',
-        'release_date', 'end_date', 'status', 'imdb_rating', 'genre_id', 'country_id'
+        'title',
+        'slug',
+        'duration_min',
+        'director',
+        'cast',
+        'language',
+        'poster_url',
+        'banner_url',
+        'trailer_url',
+        'description',
+        'release_date',
+        'end_date',
+        'status',
+        'imdb_rating',
+        'genre_id',
+        'country_id'
     ];
 
     public $incrementing = false;
@@ -22,5 +36,14 @@ class Movie extends Model
     public function showtimes()
     {
         return $this->hasMany(Showtime::class);
+    }
+    public function genre()
+    {
+        return $this->belongsTo(Genre::class, 'genre_id');
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_id');
     }
 }

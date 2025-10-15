@@ -11,7 +11,9 @@ import AdminDashboard from './components/admin/pages/AdminDashboard';
 import AdminMovies from './components/admin/pages/AdminMovies';
 import PrivateAdminRoute from './components/admin/PrivateAdminRoute';
 import './assets/css/style.scss';
-import Showtimes from './components/admin/pages/Showtimes';
+import EditMovie from './components/admin/pages/EditMovie';
+import AdminAddMovie from './components/admin/pages/AdminAddMovie';
+import AdminShowtimes from './components/admin/pages/AdminShowtimes';
 
 function App() {
   return (
@@ -51,11 +53,13 @@ function App() {
               </PrivateAdminRoute>
             }
           />
+          <Route path="/admin/movies/edit/:id" element={<EditMovie />} />
+          <Route path="/admin/movies/create" element={<AdminAddMovie />} />
           <Route
             path="/admin/showtimes"
             element={
               <PrivateAdminRoute>
-                <Showtimes />
+                <AdminShowtimes />
               </PrivateAdminRoute>
             }
           />

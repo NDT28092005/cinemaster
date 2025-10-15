@@ -150,6 +150,7 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
 
         Schema::create('countries', function (Blueprint $table) {
@@ -157,6 +158,7 @@ return new class extends Migration
             $table->string('name', 100);
             $table->string('code', 10)->unique();
             $table->text('flag_url')->nullable();
+            $table->timestamps();
         });
 
         if (!Schema::hasTable('movies')) {
