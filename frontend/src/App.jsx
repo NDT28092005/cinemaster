@@ -14,6 +14,9 @@ import './assets/css/style.scss';
 import EditMovie from './components/admin/pages/EditMovie';
 import AdminAddMovie from './components/admin/pages/AdminAddMovie';
 import AdminShowtimes from './components/admin/pages/AdminShowtimes';
+import EditShowtimes from './components/admin/pages/EditShowtimes';
+import AdminBooking from './components/admin/pages/AdminBooking';
+import BookingDetailModal from './components/admin/pages/BookingDetailModal';
 
 function App() {
   return (
@@ -63,6 +66,18 @@ function App() {
               </PrivateAdminRoute>
             }
           />
+          <Route path="/admin/showtimes/edit/:id" element={<EditShowtimes />} />
+          <Route path="/admin/showtimes/create" element={<AdminShowtimes />} />
+          <Route
+            path="/admin/booking"
+            element={
+              <PrivateAdminRoute>
+                <AdminBooking />
+              </PrivateAdminRoute>
+            }
+          />
+          {/* <Route path="/admin/booking/:id" element={<BookingDetailModal />} /> */}
+
           {/* Nếu không tìm thấy route */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

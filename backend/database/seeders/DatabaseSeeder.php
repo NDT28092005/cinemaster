@@ -11,6 +11,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+        $this->call([
+            BookingSeeder::class,
+        ]);
         // ====== GENRES ======
         $genres = [
             ['name' => 'Hành động', 'code' => 'action', 'description' => 'Phim hành động gay cấn'],
@@ -21,17 +24,25 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($genres as $genre) {
-            DB::table('genres')->updateOrInsert(
-                ['code' => $genre['code']],
-                [
+            $existing = DB::table('genres')->where('code', $genre['code'])->first();
+
+            if (!$existing) {
+                DB::table('genres')->insert([
                     'id' => Str::uuid(),
                     'name' => $genre['name'],
                     'description' => $genre['description'],
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]
-            );
+                ]);
+            } else {
+                DB::table('genres')->where('code', $genre['code'])->update([
+                    'name' => $genre['name'],
+                    'description' => $genre['description'],
+                    'is_active' => true,
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         // ====== COUNTRIES ======
@@ -47,7 +58,6 @@ class DatabaseSeeder extends Seeder
             DB::table('countries')->updateOrInsert(
                 ['code' => $country['code']],
                 [
-                    'id' => Str::uuid(),
                     'name' => $country['name'],
                     'flag_url' => $country['flag_url'],
                     'created_at' => now(),
@@ -116,7 +126,6 @@ class DatabaseSeeder extends Seeder
             DB::table('movies')->updateOrInsert(
                 ['slug' => $movie['slug']],
                 array_merge($movie, [
-                    'id' => Str::uuid(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ])
@@ -124,23 +133,25 @@ class DatabaseSeeder extends Seeder
         }
 
         // ====== CINEMAS ======
-        $cinemas = [
-            ['code' => 'CGV-HCM-1', 'name' => 'CGV Vincom Đồng Khởi', 'address' => '72 Lê Thánh Tôn, Q.1, TP.HCM'],
-            ['code' => 'CINESTAR-HCM', 'name' => 'Cinestar Nguyễn Trãi', 'address' => '135 Hai Bà Trưng, Q.1, TP.HCM'],
-        ];
+        $cinema = DB::table('cinemas')->where('code', 'CGV-HCM-1')->first();
 
-        foreach ($cinemas as $cinema) {
-            DB::table('cinemas')->updateOrInsert(
-                ['code' => $cinema['code']],
-                [
-                    'id' => Str::uuid(),
-                    'name' => $cinema['name'],
-                    'address' => $cinema['address'],
-                    'is_active' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
+        if ($cinema) {
+            DB::table('cinemas')->where('code', 'CGV-HCM-1')->update([
+                'name' => 'CGV Vincom Đồng Khởi',
+                'address' => '72 Lê Thánh Tôn, Q.1, TP.HCM',
+                'is_active' => true,
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('cinemas')->insert([
+                'id' => Str::uuid(),
+                'code' => 'CGV-HCM-1',
+                'name' => 'CGV Vincom Đồng Khởi',
+                'address' => '72 Lê Thánh Tôn, Q.1, TP.HCM',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         // ====== AUDITORIUMS ======

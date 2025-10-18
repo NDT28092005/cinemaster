@@ -9,9 +9,6 @@ use App\Models\Movie;
 
 class MovieController extends Controller
 {
-    /**
-     * 📜 Danh sách phim (có thể kèm filter theo status)
-     */
     public function index(Request $request)
     {
         $query = Movie::query();
@@ -25,9 +22,7 @@ class MovieController extends Controller
         return response()->json($movies);
     }
 
-    /**
-     * 🎬 Tạo phim mới
-     */
+    /*Tạo phim mới     */
     public function store(Request $request)
     {
         $validated = $request->validate([
