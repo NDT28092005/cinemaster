@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { FaEdit} from "react-icons/fa";
 
 export default function AdminShowtimes() {
   const [showtimes, setShowtimes] = useState([]);
@@ -8,7 +10,7 @@ export default function AdminShowtimes() {
   const [auditoriums, setAuditoriums] = useState([]);
   const [loadingAuditoriums, setLoadingAuditoriums] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate();
   const [newShowtime, setNewShowtime] = useState({
     movie_id: "",
     cinema_id: "",
@@ -263,6 +265,12 @@ export default function AdminShowtimes() {
                 </span>
               </td>
               <td>
+                <button
+                  className="btn btn-outline-primary btn-sm me-2"
+                  onClick={() => navigate(`/admin/showtimes/edit/${s.id}`)}
+                >
+                  <FaEdit /> Sửa
+                </button>
                 <button
                   className="btn btn-outline-danger btn-sm"
                   onClick={() => handleDelete(s.id)}

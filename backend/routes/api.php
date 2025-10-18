@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MovieController;
 use App\Http\Controllers\Api\ShowtimeController;
+use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Api\GenreController;
 use App\Http\Controllers\Api\CountryController;
@@ -42,7 +43,11 @@ Route::prefix('showtimes')->group(function () {
     Route::put('/{id}', [ShowtimeController::class, 'update']);
     Route::delete('/{id}', [ShowtimeController::class, 'destroy']);
 });
-
+Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);
+    Route::put('/bookings/{id}', [BookingController::class, 'update']);
+    Route::post('/bookings/{id}/refund', [BookingController::class, 'refund']);
+    Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index']);

@@ -6,23 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-class Seat extends Model
+class TicketType extends Model
 {
     use HasFactory;
 
-    protected $table = 'seats';
+    protected $table = 'ticket_types';
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'auditorium_id',
-        'row_label',
-        'col_index',
-        'seat_label',
-        'seat_type_id',
-        'is_active',
-        'is_vip',
-        'metadata',
+        'name',       // ví dụ: Adult, Child, Senior
+        'description',
+        'price_modifier', // điều chỉnh giá vé
     ];
 
     protected static function boot()
@@ -36,18 +31,8 @@ class Seat extends Model
     }
 
     // 🎯 Quan hệ
-    public function auditorium()
-    {
-        return $this->belongsTo(Auditorium::class, 'auditorium_id');
-    }
-
-    public function seatType()
-    {
-        return $this->belongsTo(SeatType::class, 'seat_type_id');
-    }
-
     public function bookedSeats()
     {
-        return $this->hasMany(BookedSeat::class, 'seat_id');
+        return $this->hasMany(BookedSeat::class, 'ticket_type_id');
     }
 }
