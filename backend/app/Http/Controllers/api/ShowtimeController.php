@@ -11,7 +11,10 @@ class ShowtimeController extends Controller
     // Lấy toàn bộ danh sách
     public function index()
     {
-        $showtimes = Showtime::with(['movie', 'cinema', 'auditorium'])->get();
+        $showtimes = Showtime::with(['movie', 'cinema', 'auditorium'])
+            ->orderBy('start_time', 'asc')
+            ->get();
+
         return response()->json($showtimes);
     }
 

@@ -17,6 +17,8 @@ import AdminShowtimes from './components/admin/pages/AdminShowtimes';
 import EditShowtimes from './components/admin/pages/EditShowtimes';
 import AdminBooking from './components/admin/pages/AdminBooking';
 import BookingDetailModal from './components/admin/pages/BookingDetailModal';
+import AdminFoodCategories from './components/admin/pages/AdminFoodCategories';
+import AdminFoodItems from './components/admin/pages/AdminFoodItems';
 
 function App() {
   return (
@@ -76,6 +78,9 @@ function App() {
               </PrivateAdminRoute>
             }
           />
+          <Route path="/admin/food-categories" element={<AdminFoodCategories />} />
+        {/* Trang quản lý món food */}
+        <Route path="/admin/food-items" element={<AdminFoodItems />} />
           {/* <Route path="/admin/booking/:id" element={<BookingDetailModal />} /> */}
 
           {/* Nếu không tìm thấy route */}
