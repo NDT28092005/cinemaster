@@ -8,20 +8,26 @@ use App\Models\Auditorium;
 
 class AuditoriumController extends Controller
 {
+    // 📋 Lấy danh sách phòng chiếu (lọc theo rạp nếu có)
     public function index(Request $request)
     {
-        $query = \App\Models\Auditorium::with('cinema');
+        try {
+            $cinemaId = $request->query('cinema_id');
 
-        if ($request->has('cinema_id')) {
-            $query->where('cinema_id', $request->cinema_id);
+            $query = Auditorium::query()->with('cinema');
+
+            if ($cinemaId) {
+                $query->where('cinema_id', $cinemaId);
+            }
+
+            $auditoriums = $query->orderBy('name')->get();
+
+            return response()->json($auditoriums);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Lỗi khi lấy danh sách phòng chiếu',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json($query->get());
-    }
-
-    public function show($id)
-    {
-        $auditorium = Auditorium::with('cinema')->findOrFail($id);
-        return response()->json($auditorium);
     }
 }

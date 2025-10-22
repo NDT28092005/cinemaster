@@ -1,4 +1,5 @@
 <?php
+
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\admin\DashboardController;
@@ -17,6 +18,10 @@ use App\Http\Controllers\Api\CinemaController;
 use App\Http\Controllers\Api\AuditoriumController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\DistrictController;
+use App\Http\Controllers\Api\FoodCategoryController;
+use App\Http\Controllers\Api\FoodItemController;
+use App\Http\Controllers\Api\BookingFoodController;
+
 
 Route::get('/cities', [CityController::class, 'index']);
 Route::get('/districts', [DistrictController::class, 'index']);
@@ -44,13 +49,27 @@ Route::prefix('showtimes')->group(function () {
     Route::delete('/{id}', [ShowtimeController::class, 'destroy']);
 });
 Route::get('/bookings', [BookingController::class, 'index']);
-    Route::get('/bookings/{id}', [BookingController::class, 'show']);
-    Route::put('/bookings/{id}', [BookingController::class, 'update']);
-    Route::post('/bookings/{id}/refund', [BookingController::class, 'refund']);
-    Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
+Route::get('/bookings/{id}', [BookingController::class, 'show']);
+Route::put('/bookings/{id}', [BookingController::class, 'update']);
+Route::post('/bookings/{id}/refund', [BookingController::class, 'refund']);
+Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index']);
+});
+Route::prefix('food')->group(function () {
+    Route::get('/categories', [FoodCategoryController::class, 'index']);
+    Route::post('/categories', [FoodCategoryController::class, 'store']);
+    Route::put('/categories/{id}', [FoodCategoryController::class, 'update']);
+    Route::delete('/categories/{id}', [FoodCategoryController::class, 'destroy']);
+
+    Route::get('/items', [FoodItemController::class, 'index']);
+    Route::post('/items', [FoodItemController::class, 'store']);
+    Route::put('/items/{id}', [FoodItemController::class, 'update']);
+    Route::delete('/items/{id}', [FoodItemController::class, 'destroy']);
+    Route::get('/booking-foods', [BookingFoodController::class, 'index']);
+    Route::post('/booking-foods', [BookingFoodController::class, 'store']);
+    Route::delete('/booking-foods/{id}', [BookingFoodController::class, 'destroy']);
 });
 Route::middleware('auth:sanctum')->get('/admin/me', [AdminAuthController::class, 'me']);
 // -------------------------
@@ -84,7 +103,7 @@ Route::post('/email/verify', function (Request $request) {
 // -------------------------
 // Protected Routes (yêu cầu login)
 // -------------------------
-Route::group(['middleware' => ['auth:sanctum']], function() {
+Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/me', [AuthenticationController::class, 'me']);
     Route::get('/logout', [AuthenticationController::class, 'logout']);
 });

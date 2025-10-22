@@ -5,23 +5,37 @@ import { FaEdit, FaTrash, FaPlus, FaSearch } from "react-icons/fa";
 
 export default function AdminMovies() {
   const [movies, setMovies] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchMovies();
+    fetchGenres();
   }, []);
 
+  // 📦 Lấy danh sách phim
   const fetchMovies = async () => {
     try {
       const res = await axios.get("http://localhost:8000/api/movies");
       setMovies(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Lỗi khi lấy phim:", err);
     }
   };
 
+  // 🎭 Lấy danh sách thể loại
+  const fetchGenres = async () => {
+    try {
+      const res = await axios.get("http://localhost:8000/api/genres");
+      setGenres(res.data);
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy thể loại:", err);
+    }
+  };
+
+  // 🗑 Xóa phim
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa phim này không?")) return;
     try {
@@ -32,14 +46,16 @@ export default function AdminMovies() {
     }
   };
 
+  // 🔍 Lọc phim
   const filteredMovies = movies.filter(
     (movie) =>
       movie.title.toLowerCase().includes(search.toLowerCase()) &&
-      (filter ? movie.genre_id === parseInt(filter) : true)
+      (filter ? movie.genre_id === filter : true)
   );
 
   return (
     <div className="container mt-4">
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="fw-bold text-primary">🎬 Quản lý Phim</h2>
         <button
@@ -66,6 +82,7 @@ export default function AdminMovies() {
             />
           </div>
         </div>
+
         <div className="col-md-3 mb-2">
           <select
             className="form-select"
@@ -73,10 +90,11 @@ export default function AdminMovies() {
             onChange={(e) => setFilter(e.target.value)}
           >
             <option value="">Tất cả thể loại</option>
-            <option value="1">Hành động</option>
-            <option value="2">Tình cảm</option>
-            <option value="3">Kinh dị</option>
-            <option value="4">Hài</option>
+            {genres.map((genre) => (
+              <option key={genre.id} value={genre.id}>
+                {genre.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -101,7 +119,11 @@ export default function AdminMovies() {
                   <tr key={movie.id}>
                     <td style={{ width: "80px" }}>
                       <img
-                        src={movie.poster_url ? `http://localhost:8000${movie.poster_url}` : '/default-poster.png'}
+                        src={
+                          movie.poster_url
+                            ? `http://localhost:8000${movie.poster_url}`
+                            : "/default-poster.png"
+                        }
                         alt={movie.title}
                         className="img-fluid rounded"
                       />
@@ -110,7 +132,9 @@ export default function AdminMovies() {
                     <td>{movie.duration_min} phút</td>
                     <td>
                       <span className="badge bg-info text-dark">
-                        {movie.genre?.name || movie.genre_id}
+                        {movie.genre?.name ||
+                          genres.find((g) => g.id === movie.genre_id)?.name ||
+                          "Không rõ"}
                       </span>
                     </td>
                     <td>
