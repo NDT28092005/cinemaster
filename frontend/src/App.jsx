@@ -20,6 +20,16 @@ import AdminEditUserPreferences from './components/admin/pages/AdminEditUserPref
 import AdminAddUserPreference from './components/admin/pages/AdminAddUserPreference';
 import AdminUserAnniversaryForm from './components/admin/pages/AdminUserAnniversaryForm';
 import AdminUserAnniversariesList from './components/admin/pages/AdminUserAnniversariesList';
+import AdminCategory from './components/admin/pages/AdminCategory';
+import AdminOccasion from './components/admin/pages/AdminOccasion';
+import AdminProducts from './components/admin/pages/AdminProduct';
+import AdminProductReview from './components/admin/pages/AdminProductReview';
+import AdminCreateCategory from './components/admin/pages/AdminCreateCategory';
+import AdminEditCategory from './components/admin/pages/AdminEditCategory';
+import AdminCreateOccasion from './components/admin/pages/AdminCreateOccasion';
+import AdminEditOccasion from './components/admin/pages/AdminEditOccasion';
+import AdminCreateProduct from './components/admin/pages/AdminCreateProduct';
+import AdminEditProduct from './components/admin/pages/AdminEditProduct';
 function App() {
   return (
     <AuthProvider>
@@ -63,13 +73,24 @@ function App() {
           <Route path="/admin/users/:id/addresses" element={<AdminUserAddresses />} />
           <Route path="/admin/users/:id/preferences" element={<AdminUserPreferences />} />
           <Route path="/admin/users/:id/anniversaries" element={<AdminUserAnniversariesList />} />
-          <Route path="/admin/users/:id/addresses/:addrId/edit" element={<AdminEditUserAddress />} />          
+          <Route path="/admin/users/:id/addresses/:addrId/edit" element={<AdminEditUserAddress />} />
           <Route path="/admin/users/:id/preferences" element={<AdminUserPreferences />} />
           <Route path="/admin/users/:id/preferences/add" element={<AdminAddUserPreference />} />
           <Route path="/admin/users/:id/preferences/:prefId/edit" element={<AdminEditUserPreferences />} />
           <Route path="/admin/users/:id/anniversaries/add" element={<AdminUserAnniversaryForm />} />
           <Route path="/admin/users/:id/anniversaries/:anniversaryId/edit" element={<AdminUserAnniversaryForm />} />
           <Route path="*" element={<Navigate to="/" />} />
+
+          <Route path="/admin/categories" element={<AdminCategory />} />
+          <Route path="/admin/categories/create" element={<AdminCreateCategory />} />
+          <Route path="/admin/categories/edit/:id" element={<AdminEditCategory />} />
+          <Route path="/admin/occasions" element={<AdminOccasion />} />
+          <Route path="/admin/occasions/create" element={<AdminCreateOccasion />} />
+          <Route path="/admin/occasions/edit/:id" element={<AdminEditOccasion />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/products/create" element={<AdminCreateProduct />} />
+          <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
+          <Route path="/admin/reviews" element={<AdminProductReview />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -13,6 +13,16 @@ use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\UserAnniversaryController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\OccasionController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductReviewController;
+
+Route::apiResource('categories', CategoryController::class);
+Route::apiResource('occasions', OccasionController::class);
+Route::apiResource('products', ProductController::class);
+Route::get('products/{id}', [ProductController::class, 'show']);
+Route::apiResource('product-reviews', ProductReviewController::class);
 
 // Addresses
 Route::prefix('users/{user_id}/addresses')->group(function () {

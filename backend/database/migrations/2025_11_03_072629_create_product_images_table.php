@@ -15,9 +15,11 @@ return new class extends Migration
     {
         Schema::create('product_images', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->string('image_url', 255);
+            $table->unsignedBigInteger('product_id');
+            $table->string('image_url')->nullable(); // ✅ Cho phép null
             $table->timestamps();
+
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
 
