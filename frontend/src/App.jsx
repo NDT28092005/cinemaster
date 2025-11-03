@@ -8,18 +8,18 @@ import VerifyEmail from './components/frontend/pages/VerifyEmail';
 import { AuthProvider } from './context/AuthProvider';
 import LoginAdmin from './components/admin/pages/LoginAdmin';
 import AdminDashboard from './components/admin/pages/AdminDashboard';
-import AdminMovies from './components/admin/pages/AdminMovies';
 import PrivateAdminRoute from './components/admin/PrivateAdminRoute';
 import './assets/css/style.scss';
-import EditMovie from './components/admin/pages/EditMovie';
-import AdminAddMovie from './components/admin/pages/AdminAddMovie';
-import AdminShowtimes from './components/admin/pages/AdminShowtimes';
-import EditShowtimes from './components/admin/pages/EditShowtimes';
-import AdminBooking from './components/admin/pages/AdminBooking';
-import BookingDetailModal from './components/admin/pages/BookingDetailModal';
-import AdminFoodCategories from './components/admin/pages/AdminFoodCategories';
-import AdminFoodItems from './components/admin/pages/AdminFoodItems';
-
+import AdminUser from './components/admin/pages/AdminUser';
+import AdminEditUser from './components/admin/pages/AdminEditUser';
+import AdminAddUser from './components/admin/pages/AdminAddUser';
+import AdminUserAddresses from './components/admin/pages/AdminUserAddresses';
+import AdminUserPreferences from './components/admin/pages/AdminUserPreferences';
+import AdminEditUserAddress from './components/admin/pages/AdminEditUserAddress';
+import AdminEditUserPreferences from './components/admin/pages/AdminEditUserPreferences';
+import AdminAddUserPreference from './components/admin/pages/AdminAddUserPreference';
+import AdminUserAnniversaryForm from './components/admin/pages/AdminUserAnniversaryForm';
+import AdminUserAnniversariesList from './components/admin/pages/AdminUserAnniversariesList';
 function App() {
   return (
     <AuthProvider>
@@ -51,39 +51,24 @@ function App() {
             }
           />
           <Route
-            path="/admin/movies"
+            path="/admin/users"
             element={
               <PrivateAdminRoute>
-                <AdminMovies />
+                <AdminUser />
               </PrivateAdminRoute>
             }
           />
-          <Route path="/admin/movies/edit/:id" element={<EditMovie />} />
-          <Route path="/admin/movies/create" element={<AdminAddMovie />} />
-          <Route
-            path="/admin/showtimes"
-            element={
-              <PrivateAdminRoute>
-                <AdminShowtimes />
-              </PrivateAdminRoute>
-            }
-          />
-          <Route path="/admin/showtimes/edit/:id" element={<EditShowtimes />} />
-          <Route path="/admin/showtimes/create" element={<AdminShowtimes />} />
-          <Route
-            path="/admin/booking"
-            element={
-              <PrivateAdminRoute>
-                <AdminBooking />
-              </PrivateAdminRoute>
-            }
-          />
-          <Route path="/admin/food-categories" element={<AdminFoodCategories />} />
-        {/* Trang quản lý món food */}
-        <Route path="/admin/food-items" element={<AdminFoodItems />} />
-          {/* <Route path="/admin/booking/:id" element={<BookingDetailModal />} /> */}
-
-          {/* Nếu không tìm thấy route */}
+          <Route path="/admin/users/edit/:id" element={<AdminEditUser />} />
+          <Route path="/admin/users/create" element={<AdminAddUser />} />
+          <Route path="/admin/users/:id/addresses" element={<AdminUserAddresses />} />
+          <Route path="/admin/users/:id/preferences" element={<AdminUserPreferences />} />
+          <Route path="/admin/users/:id/anniversaries" element={<AdminUserAnniversariesList />} />
+          <Route path="/admin/users/:id/addresses/:addrId/edit" element={<AdminEditUserAddress />} />          
+          <Route path="/admin/users/:id/preferences" element={<AdminUserPreferences />} />
+          <Route path="/admin/users/:id/preferences/add" element={<AdminAddUserPreference />} />
+          <Route path="/admin/users/:id/preferences/:prefId/edit" element={<AdminEditUserPreferences />} />
+          <Route path="/admin/users/:id/anniversaries/add" element={<AdminUserAnniversaryForm />} />
+          <Route path="/admin/users/:id/anniversaries/:anniversaryId/edit" element={<AdminUserAnniversaryForm />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

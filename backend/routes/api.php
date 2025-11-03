@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\admin\DashboardController;
 use App\Http\Controllers\AuthenticationController;
@@ -8,68 +9,44 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\MovieController;
-use App\Http\Controllers\Api\ShowtimeController;
-use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
-use App\Http\Controllers\Api\GenreController;
-use App\Http\Controllers\Api\CountryController;
-use App\Http\Controllers\Api\CinemaController;
-use App\Http\Controllers\Api\AuditoriumController;
-use App\Http\Controllers\Api\CityController;
-use App\Http\Controllers\Api\DistrictController;
-use App\Http\Controllers\Api\FoodCategoryController;
-use App\Http\Controllers\Api\FoodItemController;
-use App\Http\Controllers\Api\BookingFoodController;
+use App\Http\Controllers\Api\UserAddressController;
+use App\Http\Controllers\Api\UserPreferenceController;
+use App\Http\Controllers\Api\UserAnniversaryController;
 
-
-Route::get('/cities', [CityController::class, 'index']);
-Route::get('/districts', [DistrictController::class, 'index']);
-Route::get('/cinemas', [CinemaController::class, 'index']);
-Route::get('/auditoriums', [AuditoriumController::class, 'index']);
-Route::get('/genres', [GenreController::class, 'index']);
-Route::post('/genres', [GenreController::class, 'store']);
-
-Route::get('/countries', [CountryController::class, 'index']);
-Route::post('/countries', [CountryController::class, 'store']);
-
-Route::prefix('movies')->group(function () {
-    Route::get('/', [MovieController::class, 'index']);        // Danh sách phim
-    Route::get('/{id}', [MovieController::class, 'show']);     // Chi tiết phim
-    Route::post('/', [MovieController::class, 'store']);       // Thêm phim
-    Route::put('/{id}', [MovieController::class, 'update']);   // Cập nhật
-    Route::delete('/{id}', [MovieController::class, 'destroy']); // Xóa
+// Addresses
+Route::prefix('users/{user_id}/addresses')->group(function () {
+    Route::get('/', [UserAddressController::class, 'index']);
+    Route::post('/', [UserAddressController::class, 'store']);
+    Route::get('/{id}', [UserAddressController::class, 'show']);
+    Route::put('/{id}', [UserAddressController::class, 'update']);
+    Route::delete('/{id}', [UserAddressController::class, 'destroy']);
 });
 
-Route::prefix('showtimes')->group(function () {
-    Route::get('/', [ShowtimeController::class, 'index']);
-    Route::get('/{id}', [ShowtimeController::class, 'show']);
-    Route::post('/', [ShowtimeController::class, 'store']);
-    Route::put('/{id}', [ShowtimeController::class, 'update']);
-    Route::delete('/{id}', [ShowtimeController::class, 'destroy']);
+// Preferences (1 user only)
+Route::prefix('users/{user_id}/preferences')->group(function () {
+    Route::get('/', [UserPreferenceController::class, 'index']);
+    Route::post('/', [UserPreferenceController::class, 'store']);
+    Route::get('/{id}', [UserPreferenceController::class, 'show']);
+    Route::put('/{id}', [UserPreferenceController::class, 'update']);
+    Route::delete('/{id}', [UserPreferenceController::class, 'destroy']);
 });
-Route::get('/bookings', [BookingController::class, 'index']);
-Route::get('/bookings/{id}', [BookingController::class, 'show']);
-Route::put('/bookings/{id}', [BookingController::class, 'update']);
-Route::post('/bookings/{id}/refund', [BookingController::class, 'refund']);
-Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
+
+// Anniversaries
+Route::get('/users/{user}/anniversaries', [UserAnniversaryController::class, 'index']);
+Route::get('/users/{user}/anniversaries/{anniversary}', [UserAnniversaryController::class, 'show']); // <- Thêm dòng này
+Route::post('/users/{user}/anniversaries', [UserAnniversaryController::class, 'store']);
+Route::put('/users/{user}/anniversaries/{anniversary}', [UserAnniversaryController::class, 'update']);
+Route::delete('/users/{user}/anniversaries/{anniversary}', [UserAnniversaryController::class, 'destroy']);
+
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
+Route::get('/users', [UserController::class, 'index']);
+Route::get('/users/{user}', [UserController::class, 'show']);
+Route::post('/users', [UserController::class, 'store']);
+Route::put('/users/{user}', [UserController::class, 'update']);
+Route::delete('/users/{user}', [UserController::class, 'destroy']);
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index']);
-});
-Route::prefix('food')->group(function () {
-    Route::get('/categories', [FoodCategoryController::class, 'index']);
-    Route::post('/categories', [FoodCategoryController::class, 'store']);
-    Route::put('/categories/{id}', [FoodCategoryController::class, 'update']);
-    Route::delete('/categories/{id}', [FoodCategoryController::class, 'destroy']);
-
-    Route::get('/items', [FoodItemController::class, 'index']);
-    Route::post('/items', [FoodItemController::class, 'store']);
-    Route::put('/items/{id}', [FoodItemController::class, 'update']);
-    Route::delete('/items/{id}', [FoodItemController::class, 'destroy']);
-    Route::get('/booking-foods', [BookingFoodController::class, 'index']);
-    Route::post('/booking-foods', [BookingFoodController::class, 'store']);
-    Route::delete('/booking-foods/{id}', [BookingFoodController::class, 'destroy']);
 });
 Route::middleware('auth:sanctum')->get('/admin/me', [AdminAuthController::class, 'me']);
 // -------------------------
