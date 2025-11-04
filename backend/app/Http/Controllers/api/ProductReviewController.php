@@ -8,12 +8,15 @@ use Illuminate\Http\Request;
 
 class ProductReviewController extends Controller
 {
+    // 🧾 Lấy tất cả review (kèm product, user) - cho admin
     public function index()
     {
-        // Lấy tất cả review kèm product và user
-        return ProductReview::with(['product', 'user'])->get();
+        return ProductReview::with(['product:id,name', 'user:id,name'])
+            ->orderByDesc('created_at')
+            ->get();
     }
 
+    // ➕ Người dùng thêm review
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -24,14 +27,16 @@ class ProductReviewController extends Controller
         ]);
 
         $review = ProductReview::create($data);
-        return response()->json($review, 201);
+        return response()->json($review->load(['product', 'user']), 201);
     }
 
+    // 🔍 Xem chi tiết 1 review
     public function show(ProductReview $productReview)
     {
         return $productReview->load(['product', 'user']);
     }
 
+    // ✏️ Cập nhật nội dung review
     public function update(Request $request, ProductReview $productReview)
     {
         $data = $request->validate([
@@ -43,16 +48,30 @@ class ProductReviewController extends Controller
         return response()->json($productReview);
     }
 
+    // 🚫 Chặn review xấu (set is_blocked = true)
+    public function block(ProductReview $productReview)
+    {
+        $productReview->update(['is_blocked' => true]);
+        return response()->json([
+            'message' => 'Review đã bị chặn',
+            'review' => $productReview
+        ]);
+    }
+
+    // ♻️ Bỏ chặn review (set is_blocked = false)
+    public function unblock(ProductReview $productReview)
+    {
+        $productReview->update(['is_blocked' => false]);
+        return response()->json([
+            'message' => 'Review đã được mở lại',
+            'review' => $productReview
+        ]);
+    }
+
+    // 🗑️ Xóa review
     public function destroy(ProductReview $productReview)
     {
         $productReview->delete();
-        return response()->json(null, 204);
-    }
-
-    // Optional: Block review (is_active false)
-    public function block(ProductReview $productReview)
-    {
-        $productReview->update(['is_active' => false]);
-        return response()->json($productReview);
+        return response()->json(['message' => 'Review đã bị xóa'], 204);
     }
 }

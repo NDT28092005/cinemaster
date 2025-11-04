@@ -15,9 +15,45 @@ use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\UserAnniversaryController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OccasionController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
+use App\Http\Controllers\Api\CartController;
 
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'add']);
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/checkout', [CartController::class, 'checkout']);
+    Route::delete('/cart/clear-cart', [CartController::class, 'clearCart']);
+});
+// Orders
+Route::get('/orders', [OrderController::class, 'index']);
+Route::get('/orders/export', [OrderController::class, 'export']);
+Route::post('/orders/import', [OrderController::class, 'import']);
+Route::get('/orders/{id}', [OrderController::class, 'show']);
+Route::post('/orders', [OrderController::class, 'store']);
+Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
+
+// Payments
+Route::get('/payments', [PaymentController::class, 'index']);
+Route::put('/payments/{id}/status', [PaymentController::class, 'updateStatus']);
+// Proxy for Google Apps Script to bypass CORS
+Route::get('/sheet-proxy', [PaymentController::class, 'sheetProxy']);
+
+Route::prefix('reviews')->group(function () {
+    Route::get('/', [ProductReviewController::class, 'index']);
+    Route::post('/', [ProductReviewController::class, 'store']);
+    Route::get('/{productReview}', [ProductReviewController::class, 'show']);
+    Route::put('/{productReview}', [ProductReviewController::class, 'update']);
+    Route::delete('/{productReview}', [ProductReviewController::class, 'destroy']);
+
+    // Chặn / bỏ chặn review
+    Route::patch('/{productReview}/block', [ProductReviewController::class, 'block']);
+    Route::patch('/{productReview}/unblock', [ProductReviewController::class, 'unblock']);
+});
 Route::apiResource('categories', CategoryController::class);
 Route::apiResource('occasions', OccasionController::class);
 Route::apiResource('products', ProductController::class);

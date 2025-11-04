@@ -23,13 +23,17 @@ import AdminUserAnniversariesList from './components/admin/pages/AdminUserAnnive
 import AdminCategory from './components/admin/pages/AdminCategory';
 import AdminOccasion from './components/admin/pages/AdminOccasion';
 import AdminProducts from './components/admin/pages/AdminProduct';
-import AdminProductReview from './components/admin/pages/AdminProductReview';
 import AdminCreateCategory from './components/admin/pages/AdminCreateCategory';
 import AdminEditCategory from './components/admin/pages/AdminEditCategory';
 import AdminCreateOccasion from './components/admin/pages/AdminCreateOccasion';
 import AdminEditOccasion from './components/admin/pages/AdminEditOccasion';
 import AdminCreateProduct from './components/admin/pages/AdminCreateProduct';
 import AdminEditProduct from './components/admin/pages/AdminEditProduct';
+import AdminReview from './components/admin/pages/AdminReview';
+import AdminOrder from './components/admin/pages/AdminOrders';
+import ProductList from './components/frontend/pages/ProductList';
+import Cart from './components/frontend/pages/Cart';
+
 function App() {
   return (
     <AuthProvider>
@@ -41,7 +45,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
-
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/cart" element={<Cart />} />
           {/* Admin */}
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route
@@ -90,7 +95,9 @@ function App() {
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/products/create" element={<AdminCreateProduct />} />
           <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
-          <Route path="/admin/reviews" element={<AdminProductReview />} />
+          <Route path="/admin/reviews" element={<AdminReview />} />
+          <Route path="/admin/orders" element={<AdminOrder />} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>

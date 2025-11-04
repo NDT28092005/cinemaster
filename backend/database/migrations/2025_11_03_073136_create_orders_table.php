@@ -20,6 +20,7 @@ return new class extends Migration
             $table->decimal('total_amount', 10, 2);
             $table->enum('status', ['pending', 'processing', 'completed', 'cancelled'])->default('pending');
             $table->text('delivery_address');
+            $table->timestamp('expires_at')->nullable()->after('status');
             $table->timestamps();
         });
     }
