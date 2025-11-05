@@ -145,12 +145,14 @@ export default function Cart() {
 
     if (timeLeft === 1) {
       const currentToken = token || localStorage.getItem("token");
-      fetch("http://localhost:8000/api/cart/clear-cart", {
-        method: "DELETE",
+      fetch("http://localhost:8000/api/cart/cancel-order", {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
         },
-      }).then(() => setPaymentStatus("cancel"));
+        body: JSON.stringify({ order_id: orderId }),
+      }).then(() => setPaymentStatus("cancelled"));
     }
 
     return () => clearInterval(timer);
@@ -173,11 +175,11 @@ export default function Cart() {
       <ul>
         {cart?.items?.length > 0
           ? cart.items.map((item) => (
-              <li key={item.id}>
-                {item.product?.name || "Unknown Product"} x {item.quantity} ={" "}
-                {(item.product?.price * item.quantity).toLocaleString()} VND
-              </li>
-            ))
+            <li key={item.id}>
+              {item.product?.name || "Unknown Product"} x {item.quantity} ={" "}
+              {(item.product?.price * item.quantity).toLocaleString()} VND
+            </li>
+          ))
           : <p>Giỏ hàng trống</p>}
       </ul>
       <p><strong>Tổng cộng:</strong> {cart?.total_amount?.toLocaleString("vi-VN")} VND</p>
@@ -204,7 +206,7 @@ export default function Cart() {
       </button>
 
       {timeLeft > 0 && paymentStatus === "pending" && (
-        <p>⏳ Thời gian thanh toán còn lại: {Math.floor(timeLeft/60)}:{('0'+(timeLeft%60)).slice(-2)}</p>
+        <p>⏳ Thời gian thanh toán còn lại: {Math.floor(timeLeft / 60)}:{('0' + (timeLeft % 60)).slice(-2)}</p>
       )}
       {paymentStatus === "cancel" && <p style={{ color: 'red' }}>❌ Đơn hàng đã hủy do hết thời gian thanh toán</p>}
 

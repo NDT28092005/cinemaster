@@ -18,9 +18,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->decimal('total_amount', 10, 2);
-            $table->enum('status', ['pending', 'processing', 'completed', 'cancelled'])->default('pending');
+            $table->string('status')->default('pending');
+
             $table->text('delivery_address');
-            $table->timestamp('expires_at')->nullable()->after('status');
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
     }
