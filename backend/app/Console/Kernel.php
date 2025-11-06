@@ -4,7 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
-
+use App\Jobs\SendAnniversaryReminderJob;
 class Kernel extends ConsoleKernel
 {
     /**
@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(\Illuminate\Console\Scheduling\Schedule $schedule)
     {
         // Kiểm tra expired orders mỗi phút
+        $schedule->job(new SendAnniversaryReminderJob)->dailyAt('00:00');
         $schedule->command('orders:cancel-expired')->everyMinute();
     }
 
