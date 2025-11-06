@@ -33,6 +33,7 @@ import AdminReview from './components/admin/pages/AdminReview';
 import AdminOrder from './components/admin/pages/AdminOrders';
 import ProductList from './components/frontend/pages/ProductList';
 import Cart from './components/frontend/pages/Cart';
+import Profile from './components/frontend/pages/Profile';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/products" element={<ProductList />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/profile" element={<Profile />} />
           {/* Admin */}
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route

@@ -13,14 +13,16 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('payments', function (Blueprint $table) {
-            $table->id('payment_id');
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->enum('payment_method', ['momo', 'vnpay', 'bank_transfer', 'cod']);
-            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
-            $table->string('transaction_id', 100)->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('payments')) {
+            Schema::create('payments', function (Blueprint $table) {
+                $table->id('payment_id');
+                $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
+                $table->enum('payment_method', ['momo', 'vnpay', 'bank_transfer', 'cod']);
+                $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
+                $table->string('transaction_id', 100)->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

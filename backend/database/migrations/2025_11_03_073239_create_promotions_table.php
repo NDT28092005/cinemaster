@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('promotions', function (Blueprint $table) {
+        if (!Schema::hasTable('promotions')) {
+            Schema::create('promotions', function (Blueprint $table) {
             $table->engine = 'InnoDB';
             $table->id();
             $table->string('title', 255);
@@ -27,6 +28,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
+        }
     }
 
     /**

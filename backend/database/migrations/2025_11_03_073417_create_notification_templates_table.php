@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('notification_templates', function (Blueprint $table) {
+        if (!Schema::hasTable('notification_templates')) {
+            Schema::create('notification_templates', function (Blueprint $table) {
             $table->engine = 'InnoDB';
             $table->id();
             $table->string('name', 255);
@@ -22,6 +23,7 @@ return new class extends Migration
             $table->enum('channel', ['email', 'sms', 'push'])->default('email');
             $table->timestamps();
         });
+        }
     }
 
     /**

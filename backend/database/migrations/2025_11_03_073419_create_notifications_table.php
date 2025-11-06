@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        if (!Schema::hasTable('notifications')) {
+            Schema::create('notifications', function (Blueprint $table) {
             $table->engine = 'InnoDB';
             $table->id('notification_id');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
@@ -24,6 +25,7 @@ return new class extends Migration
             $table->enum('channel', ['email', 'sms', 'push'])->default('email');
             $table->timestamps();
         });
+        }
     }
 
     /**

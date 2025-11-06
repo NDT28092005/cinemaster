@@ -13,14 +13,19 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('promotion_usage', function (Blueprint $table) {
-            $table->engine = 'InnoDB';
-            $table->id('usage_id');
-            $table->foreignId('promotion_id')->constrained('promotions')->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('promotion_usage')) {
+            Schema::create('promotion_usage', function (Blueprint $table) {
+                $table->engine = 'InnoDB';
+                $table->id('usage_id');
+                $table->unsignedBigInteger('promotion_id');
+                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
+                $table->timestamps();
+                
+                // Add foreign key manually to avoid constraint issues
+                $table->foreign('promotion_id')->references('id')->on('promotions')->onDelete('cascade');
+            });
+        }
     }
 
     /**
