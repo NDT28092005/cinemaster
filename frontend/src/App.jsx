@@ -33,6 +33,10 @@ import AdminReview from './components/admin/pages/AdminReview';
 import AdminOrder from './components/admin/pages/AdminOrders';
 import ProductList from './components/frontend/pages/ProductList';
 import Cart from './components/frontend/pages/Cart';
+import AdminPromotions from './components/admin/pages/AdminPromotions';
+import AdminEditPromotion from './components/admin/pages/AdminEditPromotion';
+import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
+import AdminReferral from './components/admin/pages/AdminReferral';
 
 function App() {
   return (
@@ -98,6 +102,12 @@ function App() {
           <Route path="/admin/reviews" element={<AdminReview />} />
           <Route path="/admin/orders" element={<AdminOrder />} />
 
+
+          <Route path="/admin/promotions" element={<AdminPromotions />} />
+          <Route path="/admin/promotions/edit/:id" element={<AdminEditPromotion />} />
+
+          <Route path="/admin/promotion-usage" element={<AdminPromotionUsage />} />
+          <Route path="/admin/referral" element={<AdminReferral />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

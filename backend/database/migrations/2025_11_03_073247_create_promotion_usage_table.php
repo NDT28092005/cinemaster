@@ -19,6 +19,8 @@ return new class extends Migration
             $table->foreignId('promotion_id')->constrained('promotions')->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->boolean('is_valid')->default(true);
             $table->timestamps();
         });
     }

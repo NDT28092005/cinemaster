@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Observers\UserObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -27,7 +29,8 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Đăng ký UserObserver để tự động tạo referral code khi user được tạo
+        User::observe(UserObserver::class);
     }
 
     /**

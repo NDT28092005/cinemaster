@@ -55,7 +55,28 @@ class GoogleController extends Controller
                     'google_id' => $googleId,
                     'password' => bcrypt(Str::random(16)), // random password
                     'email_verified_at' => now(), // Google đã xác minh email
+                    'role' => 'customer', // Đảm bảo set role là customer
                 ]);
+                
+                Log::info('GoogleController: New user created', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'role' => $user->role
+                ]);
+
+                // Xử lý referral code nếu có
+                if ($request->filled('referral_code')) {
+                    $referralService = app(\App\Services\ReferralService::class);
+                    $result = $referralService->useReferralCode(
+                        $request->referral_code,
+                        $user->id
+                    );
+
+                    if ($result['success']) {
+                        // Tạo thưởng cho người giới thiệu
+                        $referralService->rewardReferrer($result['referrer_id']);
+                    }
+                }
             }
 
             // ✅ Tạo access token (Laravel Sanctum)
