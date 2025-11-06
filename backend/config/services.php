@@ -34,5 +34,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_CLIENT_REDIRECT')
-    ]
+    ],
+    'ghtk' => [
+        'api_url' => env('GHTK_API_URL', 'https://services.giaohangtietkiem.vn/services/shipment/order'),
+        'token' => env('GHTK_API_TOKEN'),
+    ],
 ];

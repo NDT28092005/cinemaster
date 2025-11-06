@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
+use App\Services\GHTKService;
 
 class OrderController extends Controller
 {
@@ -81,7 +82,7 @@ class OrderController extends Controller
     /**
      * ✅ Đánh dấu đã thanh toán
      */
-    public function markPaid(Request $request)
+    public function markPaid(Request $request, GHTKService $ghtkService)
     {
         $request->validate(['order_id' => 'required|integer']);
         $order = Order::find($request->order_id);
@@ -91,8 +92,24 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => 'paid']);
-        return response()->json(['message' => 'Thanh toán thành công', 'order' => $order]);
+
+        // 🚚 Tạo vận đơn GHTK
+        try {
+            $ghtkOrder = $ghtkService->createShipment($order);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Thanh toán thành công nhưng tạo đơn GHTK thất bại',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Thanh toán & tạo đơn GHTK thành công',
+            'order' => $order,
+            'ghtk_order' => $ghtkOrder
+        ]);
     }
+
 
     /**
      * ❌ Hủy các đơn quá hạn (tự động)
