@@ -1,45 +1,42 @@
-export const moviesNow = [
-  { id: 1, title: "TỬ CHIẾN TRÊN KHÔNG (T16)", poster: "/vite.svg" },
-  { id: 2, title: "EXIT 8: GA TÀU VÔ TẬN (T16)", poster: "/vite.svg" },
-  { id: 3, title: "XÁC CHẾT VỀ QUÊ (T16)", poster: "/vite.svg" },
-  { id: 4, title: "MƯA ĐỎ (T13)", poster: "/vite.svg" },
-  { id: 5, title: "KHẾ ƯỚC BÁN DÂU (T18)", poster: "/vite.svg" },
-  { id: 6, title: "THE CONJURING: NGHI LỄ CUỐI CÙNG (T16)", poster: "/vite.svg" },
-  { id: 7, title: "LÀM GIÀU VỚI MA 2 (T16)", poster: "/vite.svg" },
-  { id: 8, title: "CÔ DÂU MA (T16)", poster: "/vite.svg" },
-  { id: 9, title: "CẮT NGÓN THỬ HÀI (T18)", poster: "/vite.svg" },
-  { id: 10, title: "TRĂM DẶM TỬ THẦN (T18)", poster: "/vite.svg" },
-  { id: 11, title: "NHÀ BÚP BÊ CỦA GABBY: PHIM ĐIỆN ẢNH (P)", poster: "/vite.svg" }
+// Danh mục quà tặng nổi bật
+export const featuredGifts = [
+  { id: 1, title: "Hộp quà sinh nhật cao cấp", image: "https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?w=400", category: "birthday", price: 250000 },
+  { id: 2, title: "Bó hoa hồng Valentine", image: "https://images.unsplash.com/photo-1518895949257-8f5e228be325?w=400", category: "valentine", price: 350000 },
+  { id: 3, title: "Gấu bông siêu dễ thương", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400", category: "birthday", price: 180000 },
+  { id: 4, title: "Khung ảnh kỷ niệm", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400", category: "anniversary", price: 120000 },
+  { id: 5, title: "Chocolate handmade", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "valentine", price: 200000 },
+  { id: 6, title: "Bộ quà tặng tốt nghiệp", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "graduation", price: 300000 },
+  { id: 7, title: "Nến thơm cao cấp", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "anniversary", price: 150000 },
+  { id: 8, title: "Voucher spa", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "birthday", price: 500000 }
 ];
 
-export const moviesSoon = [
-  { id: 21, title: "TAY ANH GIỮ MỘT VÌ SAO (K)", poster: "/vite.svg" },
-  { id: 22, title: "CẬU BÉ CÁ HEO VÀ BÍ MẬT 7 ĐẠI DƯƠNG", poster: "/vite.svg" },
-  { id: 23, title: "TEE YOD: QUỶ ĂN TẠNG PHẦN 3", poster: "/vite.svg" },
-  { id: 24, title: "CẢI MẢ", poster: "/vite.svg" },
-  { id: 25, title: "CHỊ NGÃ EM NÂNG (T13)", poster: "/vite.svg" },
-  { id: 26, title: "TRON: ARES", poster: "/vite.svg" },
-  { id: 27, title: "HUYỀN THOẠI", poster: "/vite.svg" },
-  { id: 28, title: "CỤC VÀNG CỦA NGOẠI", poster: "/vite.svg" },
-  { id: 29, title: "ĐIỆN THOẠI ĐEN 2", poster: "/vite.svg" },
-  { id: 30, title: "MORTAL KOMBAT: CUỘC CHIẾN SINH TỬ II", poster: "/vite.svg" },
-  { id: 31, title: "PHÁ ĐÁM SINH NHẬT MẸ", poster: "/vite.svg" },
-  { id: 32, title: "TRỐN CHẠY TỬ THẦN", poster: "/vite.svg" }
+// Quà tặng mới về
+export const newGifts = [
+  { id: 21, title: "Túi xách da cao cấp", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400", category: "anniversary", price: 800000 },
+  { id: 22, title: "Đồng hồ thông minh", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400", category: "birthday", price: 1200000 },
+  { id: 23, title: "Bộ son môi cao cấp", image: "https://images.unsplash.com/photo-1631217968547-3a7d3e1a0a0d?w=400", category: "valentine", price: 450000 },
+  { id: 24, title: "Sách kỹ năng sống", image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400", category: "graduation", price: 180000 },
+  { id: 25, title: "Album ảnh lưu niệm", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "anniversary", price: 220000 },
+  { id: 26, title: "Bộ bàn chải điện", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "birthday", price: 350000 },
+  { id: 27, title: "Hộp bút kỷ niệm", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "graduation", price: 120000 },
+  { id: 28, title: "Nước hoa cao cấp", image: "https://images.unsplash.com/photo-1606312619070-d48b4cbc2c0c?w=400", category: "valentine", price: 650000 }
 ];
 
+// Khuyến mãi
 export const promos = [
-  { id: 101, title: "Mua vé online giảm 45k", image: "/vite.svg" },
-  { id: 102, title: "Happy Week 45k", image: "/vite.svg" },
-  { id: 103, title: "Combo School 45k", image: "/vite.svg" }
+  { id: 101, title: "Giảm 20% cho đơn trên 500k", image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=400" },
+  { id: 102, title: "Mua 2 tặng 1 cho hoa", image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=400" },
+  { id: 103, title: "Free ship cho đơn trên 300k", image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=400" }
 ];
 
-export const services = [
-  { id: 201, title: "Kidzone", image: "https://cinestar.com.vn/assets/images/img-service0.webp" },
-  { id: 202, title: "Bowling", image: "https://cinestar.com.vn/assets/images/img-service1.webp" },
-  { id: 203, title: "Billiards", image: "https://cinestar.com.vn/assets/images/img-service2.webp" },
-  { id: 204, title: "Karaoke", image: "https://cinestar.com.vn/assets/images/img-service3.webp" },
-  { id: 205, title: "Gym", image: "https://cinestar.com.vn/assets/images/img-service4.webp" },
-  { id: 206, title: "Opera", image: "https://cinestar.com.vn/assets/images/img-service5.webp" }
+// Danh mục sản phẩm
+export const categories = [
+  { id: 201, title: "Sinh nhật", image: "https://images.unsplash.com/photo-1511988617509-a57c8a288659?w=400" },
+  { id: 202, title: "Valentine", image: "https://images.unsplash.com/photo-1518895949257-8f5e228be325?w=400" },
+  { id: 203, title: "Kỷ niệm", image: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400" },
+  { id: 204, title: "Tốt nghiệp", image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400" },
+  { id: 205, title: "Khai trương", image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=400" },
+  { id: 206, title: "Tết nguyên đán", image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=400" }
 ];
 
 

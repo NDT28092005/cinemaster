@@ -1,3 +1,22 @@
-//Dùng trong các trang như danh sách phim, chi tiết phim, đặt vé.
+import React from 'react';
+import './Loader.css';
 
-// Giúp UX mượt mà hơn thay vì để trống. Khi loading === true, hiển thị <Loader />; khi dữ liệu có, hiển thị danh sách phim.
+const Loader = ({ size = 'medium', text = 'Đang tải...' }) => {
+  const sizeClass = size === 'small' ? 'loader-small' : size === 'large' ? 'loader-large' : '';
+  
+  return (
+    <div className={`loader-container ${sizeClass}`}>
+      <div className="loader-wrapper">
+        <div className="loading-spinner"></div>
+        <div className="loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      {text && <p className="loader-text">{text}</p>}
+    </div>
+  );
+};
+
+export default Loader;

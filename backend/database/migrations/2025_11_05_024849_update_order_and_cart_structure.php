@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -27,12 +28,10 @@ return new class extends Migration
 
         // 3️⃣ Chuẩn hóa bảng order_items
         if (Schema::hasTable('order_items')) {
-            Schema::table('order_items', function (Blueprint $table) {
-                // Đổi tên cột order_item_id về id nếu cần
-                if (Schema::hasColumn('order_items', 'order_item_id')) {
-                    $table->renameColumn('order_item_id', 'id');
-                }
-            });
+            // Đổi tên cột order_item_id về id nếu cần (MariaDB compatible)
+            if (Schema::hasColumn('order_items', 'order_item_id') && !Schema::hasColumn('order_items', 'id')) {
+                DB::statement('ALTER TABLE `order_items` CHANGE `order_item_id` `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT');
+            }
         }
     }
 
@@ -56,10 +55,9 @@ return new class extends Migration
             }
         });
 
-        Schema::table('order_items', function (Blueprint $table) {
-            if (Schema::hasColumn('order_items', 'id')) {
-                $table->renameColumn('id', 'order_item_id');
-            }
-        });
+        // Rollback rename column (MariaDB compatible)
+        if (Schema::hasColumn('order_items', 'id') && !Schema::hasColumn('order_items', 'order_item_id')) {
+            DB::statement('ALTER TABLE `order_items` CHANGE `id` `order_item_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT');
+        }
     }
 };

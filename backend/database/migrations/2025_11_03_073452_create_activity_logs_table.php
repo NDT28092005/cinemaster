@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('activity_logs', function (Blueprint $table) {
+        if (!Schema::hasTable('activity_logs')) {
+            Schema::create('activity_logs', function (Blueprint $table) {
             $table->id('log_id');
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('action', 255);
@@ -21,6 +22,7 @@ return new class extends Migration
             $table->ipAddress('ip_address')->nullable();
             $table->timestamps();
         });
+        }
     }
 
     /**

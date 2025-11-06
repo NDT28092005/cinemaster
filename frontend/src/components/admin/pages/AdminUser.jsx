@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../../../layouts/AdminLayout';
+import { Search, Plus, Edit, Trash2, MapPin, Heart, Calendar } from 'lucide-react';
 
 const AdminUser = () => {
     const [users, setUsers] = useState([]);
@@ -9,15 +11,16 @@ const AdminUser = () => {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const navigate = useNavigate();
+    
     const fetchUsers = async (page = 1, searchTerm = '') => {
         setLoading(true);
         try {
             const response = await axios.get(`http://localhost:8000/api/users`, {
                 params: { page, search: searchTerm },
             });
-            setUsers(response.data.data);
-            setPage(response.data.current_page);
-            setLastPage(response.data.last_page);
+            setUsers(response.data.data || []);
+            setPage(response.data.current_page || 1);
+            setLastPage(response.data.last_page || 1);
         } catch (error) {
             console.error(error);
         } finally {
@@ -35,129 +38,223 @@ const AdminUser = () => {
     };
 
     const handleDelete = async (userId) => {
-        if (!window.confirm('Are you sure you want to delete this user?')) return;
+        if (!window.confirm('Bạn có chắc muốn xóa người dùng này?')) return;
         try {
             await axios.delete(`http://localhost:8000/api/users/${userId}`);
             fetchUsers(page, search);
         } catch (error) {
             console.error(error);
+            alert('Lỗi khi xóa người dùng');
         }
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Users Management</h1>
-            <button
-                className="bg-green-500 text-white px-4 py-1 rounded mb-4"
-                onClick={() => navigate('/admin/users/create')}
-            >
-                Add User
-            </button>
-            <form onSubmit={handleSearch} className="mb-4 flex gap-2">
-                <input
-                    type="text"
-                    placeholder="Search by name or email"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="border px-2 py-1 rounded w-full"
-                />
-                <button
-                    type="submit"
-                    className="bg-blue-500 text-white px-4 py-1 rounded"
-                >
-                    Search
-                </button>
-            </form>
+        <AdminLayout>
+            <div style={{ animation: 'fadeInUp 0.6s ease-out' }}>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h1 style={{ 
+                        color: '#5D2A42', 
+                        fontSize: '2rem', 
+                        fontWeight: '600',
+                        margin: 0
+                    }}>
+                        Quản lý người dùng
+                    </h1>
+                    <button
+                        className="admin-btn admin-btn-primary"
+                        onClick={() => navigate('/admin/users/create')}
+                    >
+                        <Plus size={20} style={{ marginRight: '0.5rem' }} />
+                        Thêm người dùng
+                    </button>
+                </div>
 
-            {loading ? (
-                <p>Loading...</p>
-            ) : (
-                <table className="w-full border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border px-2 py-1">ID</th>
-                            <th className="border px-2 py-1">Full Name</th>
-                            <th className="border px-2 py-1">Email</th>
-                            <th className="border px-2 py-1">Role</th>
-                            <th className="border px-2 py-1">Active</th>
-                            <th className="border px-2 py-1">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(!users || users.length === 0) ? (
-                            <tr>
-                                <td colSpan="6" className="text-center py-4">
-                                    No users found.
-                                </td>
-                            </tr>
-                        ) : (
-                            users.map((user) => (
-                                <tr key={user.id}>
-                                    <td className="border px-2 py-1">{user.id}</td>
-                                    <td className="border px-2 py-1">{user.name}</td>
-                                    <td className="border px-2 py-1">{user.email}</td>
-                                    <td className="border px-2 py-1">{user.role}</td>
-                                    <td className="border px-2 py-1">{user.is_active ? 'Yes' : 'No'}</td>
-                                    <td className="border px-2 py-1 flex gap-2">
-                                        <button
-                                            className="bg-yellow-500 text-white px-2 py-1 rounded"
-                                            onClick={() => navigate(`/admin/users/edit/${user.id}`)}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            className="bg-blue-500 text-white px-2 py-1 rounded"
-                                            onClick={() => navigate(`/admin/users/${user.id}/addresses`)}
-                                        >
-                                            Addresses
-                                        </button>
-                                        <button
-                                            className="bg-purple-500 text-white px-2 py-1 rounded"
-                                            onClick={() => navigate(`/admin/users/${user.id}/preferences`)}
-                                        >
-                                            Preferences
-                                        </button>
-                                        <button
-                                            className="bg-pink-500 text-white px-2 py-1 rounded"
-                                            onClick={() => navigate(`/admin/users/${user.id}/anniversaries`)}
-                                        >
-                                            Anniversaries
-                                        </button>
-                                        <button
-                                            className="bg-red-500 text-white px-2 py-1 rounded"
-                                            onClick={() => handleDelete(user.id)}
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            )}
+                {/* Search Form */}
+                <div className="admin-card mb-4">
+                    <form onSubmit={handleSearch} className="d-flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm theo tên hoặc email..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="form-control"
+                            style={{
+                                flex: 1,
+                                border: '2px solid rgba(251, 99, 118, 0.2)',
+                                borderRadius: '15px',
+                                padding: '0.85rem 1.25rem'
+                            }}
+                        />
+                        <button
+                            type="submit"
+                            className="admin-btn admin-btn-secondary"
+                        >
+                            <Search size={20} style={{ marginRight: '0.5rem' }} />
+                            Tìm kiếm
+                        </button>
+                    </form>
+                </div>
 
-            {/* Pagination */}
-            <div className="mt-4 flex gap-2">
-                <button
-                    disabled={page <= 1}
-                    onClick={() => fetchUsers(page - 1, search)}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                    Previous
-                </button>
-                <span className="px-3 py-1">
-                    Page {page} of {lastPage}
-                </span>
-                <button
-                    disabled={page >= lastPage}
-                    onClick={() => fetchUsers(page + 1, search)}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                    Next
-                </button>
+                {/* Users Table */}
+                {loading ? (
+                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
+                        <div className="loading-spinner" style={{ 
+                            width: '60px', 
+                            height: '60px', 
+                            border: '5px solid rgba(251, 99, 118, 0.2)', 
+                            borderTopColor: '#FB6376', 
+                            borderRightColor: '#FCB1A6', 
+                            borderRadius: '50%', 
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                    </div>
+                ) : (
+                    <div className="admin-card">
+                        <div className="table-responsive">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Họ tên</th>
+                                        <th>Email</th>
+                                        <th>Vai trò</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(!users || users.length === 0) ? (
+                                        <tr>
+                                            <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                                                Không tìm thấy người dùng nào.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        users.map((user) => (
+                                            <tr key={user.id}>
+                                                <td>#{user.id}</td>
+                                                <td>{user.name || 'N/A'}</td>
+                                                <td>{user.email || 'N/A'}</td>
+                                                <td>
+                                                    <span style={{
+                                                        padding: '0.25rem 0.75rem',
+                                                        borderRadius: '15px',
+                                                        fontSize: '0.85rem',
+                                                        background: user.role === 'admin' 
+                                                            ? 'rgba(251, 99, 118, 0.1)' 
+                                                            : 'rgba(93, 42, 66, 0.1)',
+                                                        color: user.role === 'admin' ? '#FB6376' : '#5D2A42',
+                                                        fontWeight: '500'
+                                                    }}>
+                                                        {user.role || 'user'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span style={{
+                                                        padding: '0.25rem 0.75rem',
+                                                        borderRadius: '15px',
+                                                        fontSize: '0.85rem',
+                                                        background: user.is_active 
+                                                            ? 'rgba(40, 167, 69, 0.1)' 
+                                                            : 'rgba(220, 53, 69, 0.1)',
+                                                        color: user.is_active ? '#28a745' : '#dc3545',
+                                                        fontWeight: '500'
+                                                    }}>
+                                                        {user.is_active ? 'Hoạt động' : 'Khóa'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex gap-2" style={{ flexWrap: 'wrap' }}>
+                                                        <button
+                                                            className="admin-btn"
+                                                            style={{ 
+                                                                padding: '0.5rem 0.75rem',
+                                                                background: 'rgba(255, 193, 7, 0.1)',
+                                                                color: '#ffc107',
+                                                                border: '1px solid rgba(255, 193, 7, 0.3)'
+                                                            }}
+                                                            onClick={() => navigate(`/admin/users/edit/${user.id}`)}
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            className="admin-btn"
+                                                            style={{ 
+                                                                padding: '0.5rem 0.75rem',
+                                                                background: 'rgba(0, 123, 255, 0.1)',
+                                                                color: '#007bff',
+                                                                border: '1px solid rgba(0, 123, 255, 0.3)'
+                                                            }}
+                                                            onClick={() => navigate(`/admin/users/${user.id}/addresses`)}
+                                                        >
+                                                            <MapPin size={16} />
+                                                        </button>
+                                                        <button
+                                                            className="admin-btn"
+                                                            style={{ 
+                                                                padding: '0.5rem 0.75rem',
+                                                                background: 'rgba(251, 99, 118, 0.1)',
+                                                                color: '#FB6376',
+                                                                border: '1px solid rgba(251, 99, 118, 0.3)'
+                                                            }}
+                                                            onClick={() => navigate(`/admin/users/${user.id}/preferences`)}
+                                                        >
+                                                            <Heart size={16} />
+                                                        </button>
+                                                        <button
+                                                            className="admin-btn"
+                                                            style={{ 
+                                                                padding: '0.5rem 0.75rem',
+                                                                background: 'rgba(252, 177, 166, 0.1)',
+                                                                color: '#FCB1A6',
+                                                                border: '1px solid rgba(252, 177, 166, 0.3)'
+                                                            }}
+                                                            onClick={() => navigate(`/admin/users/${user.id}/anniversaries`)}
+                                                        >
+                                                            <Calendar size={16} />
+                                                        </button>
+                                                        <button
+                                                            className="admin-btn admin-btn-danger"
+                                                            style={{ padding: '0.5rem 0.75rem' }}
+                                                            onClick={() => handleDelete(user.id)}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        <div className="d-flex justify-content-between align-items-center mt-4">
+                            <span style={{ color: '#666' }}>
+                                Trang {page} / {lastPage}
+                            </span>
+                            <div className="d-flex gap-2">
+                                <button
+                                    className="admin-btn admin-btn-secondary"
+                                    disabled={page <= 1}
+                                    onClick={() => fetchUsers(page - 1, search)}
+                                >
+                                    Trước
+                                </button>
+                                <button
+                                    className="admin-btn admin-btn-secondary"
+                                    disabled={page >= lastPage}
+                                    onClick={() => fetchUsers(page + 1, search)}
+                                >
+                                    Sau
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

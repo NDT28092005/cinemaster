@@ -26,14 +26,25 @@ class AdminAuthController extends Controller
     }
     public function login(Request $request)
     {
-        // ✅ Validate input
+        // ✅ Validate input - accept cả email và name
         $request->validate([
-            'name' => 'required|string',
+            'email' => 'nullable|string',
+            'name' => 'nullable|string',
             'password' => 'required',
         ]);
 
-        // ✅ Tìm user theo email
-        $user = User::where('name', $request->name)->first();
+        // ✅ Kiểm tra có ít nhất email hoặc name
+        if (!$request->email && !$request->name) {
+            return response()->json(['message' => 'Vui lòng nhập email hoặc tên đăng nhập'], 422);
+        }
+
+        // ✅ Tìm user theo email hoặc name
+        $user = null;
+        if ($request->email) {
+            $user = User::where('email', $request->email)->first();
+        } elseif ($request->name) {
+            $user = User::where('name', $request->name)->first();
+        }
 
         // ✅ Kiểm tra user tồn tại và password đúng
         if (!$user || !Hash::check($request->password, $user->password)) {

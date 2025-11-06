@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('daily_statistics', function (Blueprint $table) {
+        if (!Schema::hasTable('daily_statistics')) {
+            Schema::create('daily_statistics', function (Blueprint $table) {
             $table->id('stat_id');
             $table->date('date')->unique();
             $table->integer('total_orders')->default(0);
@@ -21,6 +22,7 @@ return new class extends Migration
             $table->integer('new_users')->default(0);
             $table->timestamps();
         });
+        }
     }
 
     /**
