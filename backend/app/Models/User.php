@@ -37,8 +37,25 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(UserAnniversary::class, 'user_id', 'id');
     }
+    
     public function preferences()
     {
         return $this->hasOne(UserPreference::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User có referral code (là người giới thiệu)
+     */
+    public function referral()
+    {
+        return $this->hasOne(Referral::class, 'referrer_id', 'id');
+    }
+
+    /**
+     * Relationship: User được giới thiệu bởi ai
+     */
+    public function referredBy()
+    {
+        return $this->hasOne(Referral::class, 'referred_id', 'id');
     }
 }

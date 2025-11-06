@@ -10,6 +10,8 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
+use App\Http\Controllers\Api\PromotionController;
+use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\UserAnniversaryController;
@@ -20,8 +22,38 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\PromotionUsageController;
 
 
+// Promotions
+Route::apiResource('promotions', PromotionController::class);
+Route::get('promotions/{promotion}/usages', [PromotionController::class, 'usages']);
+
+Route::prefix('admin')->group(function () {
+    // 🔹 Promotion Usage
+    Route::get('/promotion-usage', [PromotionUsageController::class, 'index']);
+    Route::get('/promotion-usage/export', [PromotionUsageController::class, 'export']);
+    Route::get('/promotion-usage/dashboard', [PromotionUsageController::class, 'dashboard']);
+    Route::post('/promotion-usage', [PromotionUsageController::class, 'store']);
+    Route::get('/promotion-usage/{id}', [PromotionUsageController::class, 'show']);
+    Route::put('/promotion-usage/{id}', [PromotionUsageController::class, 'update']);
+    Route::delete('/promotion-usage/{id}', [PromotionUsageController::class, 'destroy']);
+
+    // 🔹 Referrals
+    Route::get('/referrals', [ReferralController::class, 'index']);
+    Route::get('/referrals/export', [ReferralController::class, 'export']);
+    Route::get('/referrals/dashboard', [ReferralController::class, 'dashboard']);
+    Route::post('/referrals', [ReferralController::class, 'store']);
+    Route::get('/referrals/{id}', [ReferralController::class, 'show']);
+    Route::put('/referrals/{id}', [ReferralController::class, 'update']);
+    Route::delete('/referrals/{id}', [ReferralController::class, 'destroy']);
+});
+
+// Public referral endpoints
+Route::post('/referrals/validate', [ReferralController::class, 'validateCode']);
+Route::middleware('auth:sanctum')->post('/referrals/use', [ReferralController::class, 'use']);
+
+//cart
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart/add', [CartController::class, 'add']);
     Route::get('/cart', [CartController::class, 'index']);
