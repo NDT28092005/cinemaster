@@ -13,6 +13,34 @@ class OrderController extends Controller
     /**
      * 🧾 Danh sách đơn hàng
      */
+    public function calcShipping(Request $request)
+{
+    $weight = $request->weight ?? 500; // gram
+    $province = $request->province;
+    $district = $request->district;
+    $ward = $request->ward;
+
+    $client = new \GuzzleHttp\Client();
+    $response = $client->post("https://services.ghtk.vn/services/shipment/fee", [
+        "headers" => [
+            "Token" => env("GHTK_TOKEN"),
+            "Content-Type" => "application/json",
+        ],
+        "json" => [
+            "province" => $province,
+            "district" => $district,
+            "ward" => $ward,
+            "pick_province" => "Đà Nẵng",
+            "pick_district" => "Hải Châu",
+            "weight" => $weight,
+        ]
+    ]);
+
+    $result = json_decode($response->getBody(), true);
+    return response()->json([
+        "shipping_fee" => $result['fee']['fee']
+    ]);
+}
     public function index(Request $request)
     {
         $orders = Order::with(['user', 'items.product'])
@@ -29,7 +57,13 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'delivery_address' => 'required|string|max:255',
+            'delivery_address'   => 'required|string|max:255',
+            'customer_name'      => 'required|string|max:100',
+            'customer_phone'     => 'required|string|max:20',
+            'customer_province'  => 'required|string|max:100',
+            'customer_district'  => 'required|string|max:100',
+            'customer_ward'      => 'required|string|max:100',
+            'shipping_fee'       => 'required|numeric|min:0',
         ]);
 
         $user = $request->user();
@@ -49,10 +83,16 @@ class OrderController extends Controller
 
         // Tạo order
         $order = Order::create([
-            'user_id' => $user->id,
-            'total_amount' => $total,
-            'delivery_address' => $request->delivery_address,
-            'expires_at' => now()->addMinutes(5),
+            'user_id'            => $user->id,
+            'total_amount'       => $total,
+            'shipping_fee' => $request->shipping_fee,
+            'delivery_address'   => $request->delivery_address,
+            'customer_name'      => $request->customer_name,
+            'customer_phone'     => $request->customer_phone,
+            'customer_province'  => $request->customer_province,
+            'customer_district'  => $request->customer_district,
+            'customer_ward'      => $request->customer_ward,
+            'expires_at'         => now()->addMinutes(5),
         ]);
 
         // Thêm order_items
@@ -74,8 +114,9 @@ class OrderController extends Controller
         return response()->json([
             'order_id' => $order->id,
             'qr_code' => $qrCode,
-            'amount' => $total,
             'addInfo' => $transferContent,
+            'shipping_fee' => $order->shipping_fee,
+            'amount' => $order->total_amount + $order->shipping_fee,
         ]);
     }
 

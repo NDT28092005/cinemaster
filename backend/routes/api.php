@@ -25,6 +25,9 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\PromotionUsageController;
 
 
+Route::post('/orders/calc-shipping', [OrderController::class, 'calcShipping']);
+Route::post('/orders/mark-paid', [OrderController::class, 'markPaid']);
+// Route::post('/ghtk/webhook', [GHTKWebhookController::class, 'updateStatus']);
 // Promotions
 Route::apiResource('promotions', PromotionController::class);
 Route::get('promotions/{promotion}/usages', [PromotionController::class, 'usages']);
