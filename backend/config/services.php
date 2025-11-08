@@ -37,6 +37,6 @@ return [
     ],
     'ghtk' => [
         'api_url' => env('GHTK_API_URL', 'https://services.giaohangtietkiem.vn/services/shipment/order'),
-        'token' => env('GHTK_API_TOKEN'),
+        'token' => env('GHTK_TOKEN'),
     ],
 ];

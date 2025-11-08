@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,12 @@ class Order extends Model
         'total_amount',
         'status',
         'delivery_address',
+        'expires_at',
+        'customer_name',
+        'customer_phone',
+        'customer_province',
+        'customer_district',
+        'customer_ward'
     ];
 
     public function user()

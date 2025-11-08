@@ -60,7 +60,12 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'delivery_address' => 'required|string|max:255',
-            'payment_method'   => 'required|string|in:cod,momo,bank_transfer'
+            'payment_method'   => 'required|string|in:cod,momo,bank_transfer',
+            'customer_name'    => 'nullable|string|max:255',
+            'customer_phone'   => 'nullable|string|max:20',
+            'customer_province' => 'nullable|string|max:255',
+            'customer_district' => 'nullable|string|max:255',
+            'customer_ward'    => 'nullable|string|max:255',
         ]);
 
         $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
@@ -71,12 +76,16 @@ class CartController extends Controller
         DB::beginTransaction();
         try {
             $order = Order::create([
-                'user_id'          => $user->id,
-                'delivery_address' => $validated['delivery_address'],
-                'payment_method'   => $validated['payment_method'],
-                'total_amount'     => $total,
-                'status'           => 'pending',
-                'expires_at'       => now()->addMinutes(5), // hết hạn 5 phút
+                'user_id'           => $user->id,
+                'delivery_address'  => $validated['delivery_address'],
+                'customer_name'     => $validated['customer_name'] ?? null,
+                'customer_phone'    => $validated['customer_phone'] ?? null,
+                'customer_province' => $validated['customer_province'] ?? null,
+                'customer_district' => $validated['customer_district'] ?? null,
+                'customer_ward'     => $validated['customer_ward'] ?? null,
+                'total_amount'      => $total,
+                'status'            => 'pending',
+                'expires_at'        => now()->addMinutes(5), // hết hạn 5 phút
             ]);
 
             foreach ($cartItems as $item) {
