@@ -58,6 +58,8 @@ Route::middleware('auth:sanctum')->post('/referrals/use', [ReferralController::c
 
 //cart
 Route::middleware('auth:sanctum')->group(function () {
+    Route::put('/cart/update', [CartController::class, 'updateQuantity']);
+    Route::delete('/cart/remove', [CartController::class, 'removeItem']);
     Route::post('/cart/add', [CartController::class, 'add']);
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/checkout', [CartController::class, 'checkout']);

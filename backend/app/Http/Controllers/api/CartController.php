@@ -39,16 +39,29 @@ class CartController extends Controller
             'quantity'   => 'required|integer|min:1'
         ]);
 
-        $cartItem = Cart::updateOrCreate(
-            ['user_id' => $user->id, 'product_id' => $validated['product_id']],
-            ['quantity' => DB::raw('quantity + ' . $validated['quantity'])]
-        );
+        $cartItem = Cart::where('user_id', $user->id)
+            ->where('product_id', $validated['product_id'])
+            ->first();
+
+        if ($cartItem) {
+            // ✅ CÓ rồi → tăng số lượng
+            $cartItem->quantity += $validated['quantity'];
+            $cartItem->save();
+        } else {
+            // ✅ CHƯA có → tạo mới
+            $cartItem = Cart::create([
+                'user_id'    => $user->id,
+                'product_id' => $validated['product_id'],
+                'quantity'   => $validated['quantity'], // GIỮ NGUYÊN 1, không nhân đôi
+            ]);
+        }
 
         return response()->json([
             'message' => 'Thêm sản phẩm vào giỏ hàng thành công',
             'cart_item' => $cartItem
         ]);
     }
+
 
     /**
      * 💳 Thanh toán (tạo order)
@@ -176,5 +189,56 @@ class CartController extends Controller
         foreach ($expiredOrders as $order) {
             $order->update(['status' => 'cancelled']);
         }
+    }
+    public function updateQuantity(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $validated = $request->validate([
+            'cart_id' => 'required|exists:carts,id',
+            'quantity' => 'required|integer|min:1'
+        ]);
+
+        $cartItem = Cart::where('id', $validated['cart_id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$cartItem) return response()->json(['message' => 'Item not found'], 404);
+
+        $cartItem->update(['quantity' => $validated['quantity']]);
+
+        // Recalculate total
+        $items = Cart::with('product')->where('user_id', $user->id)->get();
+        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
+
+        return response()->json([
+            'message' => 'Cart updated',
+            'items' => $items,
+            'total_amount' => $total
+        ]);
+    }
+    public function removeItem(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $validated = $request->validate([
+            'cart_id' => 'required|exists:carts,id'
+        ]);
+
+        Cart::where('id', $validated['cart_id'])
+            ->where('user_id', $user->id)
+            ->delete();
+
+        // Recalculate total
+        $items = Cart::with('product')->where('user_id', $user->id)->get();
+        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
+
+        return response()->json([
+            'message' => 'Item removed',
+            'items' => $items,
+            'total_amount' => $total
+        ]);
     }
 }
