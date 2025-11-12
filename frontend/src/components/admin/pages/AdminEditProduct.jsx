@@ -17,9 +17,12 @@ export default function AdminEditProduct() {
     is_active: true,
   });
 
-  const [images, setImages] = useState([]); // Ảnh mới upload
-  const [previewUrls, setPreviewUrls] = useState([]); // Preview ảnh mới
-  const [oldImageUrl, setOldImageUrl] = useState(""); // Ảnh cũ hiển thị
+  const [mainImage, setMainImage] = useState(null);        // ảnh chính mới upload
+  const [oldMainImage, setOldMainImage] = useState("");    // ảnh chính cũ
+
+  const [oldImages, setOldImages] = useState([]);          // danh sách ảnh phụ cũ
+  const [previewImages, setPreviewImages] = useState([]);  // preview ảnh phụ mới
+
   const [categories, setCategories] = useState([]);
   const [occasions, setOccasions] = useState([]);
 
@@ -34,7 +37,9 @@ export default function AdminEditProduct() {
         getCategories(),
         getOccasions(),
       ]);
+
       const product = prodRes.data;
+
       setForm({
         name: product.name,
         price: product.price,
@@ -43,7 +48,10 @@ export default function AdminEditProduct() {
         occasion_id: product.occasion_id || "",
         is_active: product.is_active,
       });
-      setOldImageUrl(product.image_url || "");
+
+      setOldMainImage(product.image_url || ""); // ảnh chính
+      setOldImages(product.images || []);       // ảnh phụ (từ bảng product_images)
+
       setCategories(catsRes.data);
       setOccasions(occRes.data);
     } catch (err) {
@@ -51,10 +59,15 @@ export default function AdminEditProduct() {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleMainImageChange = (e) => {
+    setMainImage(e.target.files[0]);
+  };
+
+  const handleOtherImagesChange = (e) => {
     const files = Array.from(e.target.files);
-    setImages(files);
-    setPreviewUrls(files.map((file) => URL.createObjectURL(file))); // Tạo preview
+    setPreviewImages(files.map((file) => URL.createObjectURL(file)));
+    setOldImages([]); // clear ảnh cũ để preview ảnh mới
+    setForm((prev) => ({ ...prev, images: files }));
   };
 
   const handleSubmit = async (e) => {
@@ -63,18 +76,18 @@ export default function AdminEditProduct() {
 
     Object.entries(form).forEach(([key, value]) => {
       if (key === "is_active") {
-        data.append(key, value ? 1 : 0); // gửi boolean đúng cho Laravel
+        data.append(key, value ? 1 : 0);
       } else {
         data.append(key, value);
       }
     });
 
-    // Nếu có ảnh mới, append vào formData
-    if (images.length > 0) {
-      images.forEach((file) => data.append("images[]", file));
-    } else {
-      // Nếu không có ảnh mới, gửi một cờ giữ nguyên ảnh cũ
-      data.append("keep_old_image", 1);
+    // ✅ Gửi ảnh chính
+    if (mainImage) data.append("main_image", mainImage);
+
+    // ✅ Gửi ảnh phụ
+    if (form.images?.length > 0) {
+      form.images.forEach((file) => data.append("images[]", file));
     }
 
     try {
@@ -91,6 +104,7 @@ export default function AdminEditProduct() {
     <div className="p-6">
       <h2>✏️ Chỉnh sửa sản phẩm</h2>
       <form onSubmit={handleSubmit}>
+        {/* Tên */}
         <div>
           <label>Tên:</label>
           <input
@@ -100,6 +114,7 @@ export default function AdminEditProduct() {
           />
         </div>
 
+        {/* Giá */}
         <div>
           <label>Giá:</label>
           <input
@@ -109,6 +124,7 @@ export default function AdminEditProduct() {
           />
         </div>
 
+        {/* Tồn kho */}
         <div>
           <label>Tồn kho:</label>
           <input
@@ -118,6 +134,7 @@ export default function AdminEditProduct() {
           />
         </div>
 
+        {/* Danh mục */}
         <div>
           <label>Danh mục:</label>
           <select
@@ -126,13 +143,12 @@ export default function AdminEditProduct() {
           >
             <option value="">--Chọn--</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
 
+        {/* Dịp */}
         <div>
           <label>Dịp:</label>
           <select
@@ -141,13 +157,12 @@ export default function AdminEditProduct() {
           >
             <option value="">--Chọn--</option>
             {occasions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
+              <option key={o.id} value={o.id}>{o.name}</option>
             ))}
           </select>
         </div>
 
+        {/* Trạng thái */}
         <div>
           <label>Trạng thái:</label>
           <input
@@ -158,18 +173,44 @@ export default function AdminEditProduct() {
           Kích hoạt
         </div>
 
-        <div>
-          <label>Ảnh sản phẩm:</label>
-          {/* Nếu có preview ảnh mới, hiển thị preview */}
-          {previewUrls.length > 0
-            ? previewUrls.map((url, idx) => (
-                <img key={idx} src={url} alt="preview" width={120} style={{ marginRight: 10 }} />
-              ))
-            : oldImageUrl && <img src={oldImageUrl} alt="ảnh cũ" width={120} />}
-          <input type="file" multiple onChange={handleImageChange} />
+        {/* Ảnh chính */}
+        <div style={{ marginTop: 20 }}>
+          <label>Ảnh chính:</label>
+          <br />
+          {oldMainImage && (
+            <img src={oldMainImage} width={150} alt="Ảnh chính" />
+          )}
+          <input type="file" onChange={handleMainImageChange} />
         </div>
 
-        <button type="submit">Cập nhật</button>
+        {/* Ảnh phụ */}
+        <div style={{ marginTop: 20 }}>
+          <label>Ảnh phụ:</label>
+
+          {/* Hiển thị ảnh phụ cũ */}
+          {oldImages.length > 0 && (
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {oldImages.map((img) => (
+                <img key={img.id} src={img.image_url} width={120} alt="Ảnh phụ cũ" />
+              ))}
+            </div>
+          )}
+
+          {/* Preview ảnh phụ mới */}
+          {previewImages.length > 0 && (
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {previewImages.map((url, idx) => (
+                <img key={idx} src={url} width={120} alt="Preview ảnh phụ mới" />
+              ))}
+            </div>
+          )}
+
+          <input type="file" multiple onChange={handleOtherImagesChange} />
+        </div>
+
+        <button type="submit" style={{ marginTop: 20 }}>
+          ✅ Cập nhật
+        </button>
       </form>
     </div>
   );

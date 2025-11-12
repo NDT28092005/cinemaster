@@ -108,7 +108,33 @@ export default function Cart() {
         setLoading(false);
       });
   };
+  const updateQuantity = (cartId, newQty) => {
+    const currentToken = token || localStorage.getItem("token");
 
+    axios.put("http://localhost:8000/api/cart/update", {
+      cart_id: cartId,
+      quantity: newQty
+    }, {
+      headers: { Authorization: `Bearer ${currentToken}` }
+    })
+      .then(res => {
+        setCart(res.data);
+      })
+      .catch(err => console.error(err));
+  };
+
+  const removeFromCart = (cartId) => {
+    const currentToken = token || localStorage.getItem("token");
+
+    axios.delete("http://localhost:8000/api/cart/remove", {
+      headers: { Authorization: `Bearer ${currentToken}` },
+      data: { cart_id: cartId }
+    })
+      .then(res => {
+        setCart(res.data);
+      })
+      .catch(err => console.error(err));
+  };
   // Poll Google Sheet
   const checkPaymentFromGoogleAPI = async () => {
     try {
@@ -261,16 +287,25 @@ export default function Cart() {
                         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                         gap: '20px'
                       }}>
-                        <img
-                          src={item.product?.images?.[0]?.image_url || 'https://via.placeholder.com/100'}
-                          alt={item.product?.name}
-                          style={{
-                            width: '100px',
-                            height: '100px',
-                            objectFit: 'cover',
-                            borderRadius: '8px'
-                          }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="btn btn-light"
+                            disabled={item.quantity <= 1}
+                          >-</button>
+
+                          <span style={{ width: "35px", textAlign: "center" }}>{item.quantity}</span>
+
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="btn btn-light"
+                          >+</button>
+
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="btn btn-danger ms-3"
+                          >X</button>
+                        </div>
                         <div style={{ flex: 1 }}>
                           <h5 style={{ color: '#5D2A42', marginBottom: '8px', fontWeight: '500', fontSize: '1.05rem' }}>
                             {item.product?.name || "Unknown Product"}

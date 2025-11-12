@@ -102,9 +102,8 @@ class ProductController extends Controller
 
     public function update(Request $request, $id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with('images')->findOrFail($id);
 
-        // Validate dữ liệu
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
@@ -112,32 +111,63 @@ class ProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'occasion_id' => 'nullable|exists:occasions,id',
             'is_active' => 'required|boolean',
-            'images.*' => 'nullable|image|max:2048',
+
+            // ✅ tách ảnh chính và ảnh phụ
+            'main_image' => 'nullable|image|max:4096',
+            'images.*'   => 'nullable|image|max:4096',
         ]);
 
-        $product->name = $request->name;
-        $product->price = $request->price;
-        $product->stock_quantity = $request->stock_quantity ?? 0;
-        $product->category_id = $request->category_id;
-        $product->occasion_id = $request->occasion_id;
-        $product->is_active = $request->is_active;
+        DB::beginTransaction();
+        try {
+            // Cập nhật thông tin sản phẩm cơ bản
+            $product->update([
+                'name' => $request->name,
+                'price' => $request->price,
+                'stock_quantity' => $request->stock_quantity ?? 0,
+                'category_id' => $request->category_id,
+                'occasion_id' => $request->occasion_id,
+                'is_active' => $request->is_active,
+            ]);
 
-        // Xử lý ảnh mới
-        if ($request->hasFile('images')) {
-            // Xóa ảnh cũ
-            if ($product->image_url && file_exists(public_path($product->image_url))) {
-                unlink(public_path($product->image_url));
+            /**
+             * ✅ 1. Xử lý ảnh chính
+             */
+            if ($request->hasFile('main_image')) {
+
+                // Xóa ảnh cũ nếu tồn tại
+                if ($product->image_url) {
+                    Storage::disk('public')->delete(str_replace('storage/', '', $product->image_url));
+                }
+
+                $path = $request->file('main_image')->store('products/main', 'public');
+                $product->update(['image_url' => asset("storage/$path")]);
             }
 
-            $uploaded = $request->file('images')[0]; // lấy ảnh đầu tiên nếu nhiều
-            $path = $uploaded->store('products', 'public');
-            $product->image_url = 'http://localhost:8000/storage/' . $path;
+            /**
+             * ✅ 2. Xử lý ảnh phụ (gallery)
+             */
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store('products/gallery', 'public');
+                    $product->images()->create([
+                        'image_url' => asset("storage/$path"),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Product updated successfully!',
+                'product' => $product->load('images'),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        $product->save();
-
-        return response()->json($product);
     }
+
+
 
     public function destroy($id)
     {

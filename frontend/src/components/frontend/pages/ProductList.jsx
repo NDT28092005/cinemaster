@@ -16,7 +16,7 @@ export default function ProductList() {
   const { token, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
-
+  
   useEffect(() => {
     setLoading(true);
     axios.get('http://localhost:8000/api/products')
