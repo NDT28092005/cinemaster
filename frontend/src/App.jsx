@@ -38,6 +38,7 @@ import AdminPromotions from './components/admin/pages/AdminPromotions';
 import AdminEditPromotion from './components/admin/pages/AdminEditPromotion';
 import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
 import AdminReferral from './components/admin/pages/AdminReferral';
+import Chat from './components/Chat/Chat';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="/products" element={<ProductList />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/chat" element={<Chat />} />
           {/* Admin */}
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route

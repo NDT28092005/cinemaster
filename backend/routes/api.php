@@ -22,8 +22,15 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PromotionUsageController;
 
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/chat/start', [ChatController::class, 'start']);
+    Route::get('/chat/messages/{id}', [ChatController::class, 'messages']);
+    Route::post('/chat/send', [ChatController::class, 'send']);
+});
 
 Route::post('/orders/calc-shipping', [OrderController::class, 'calcShipping']);
 Route::post('/orders/mark-paid', [OrderController::class, 'markPaid']);
