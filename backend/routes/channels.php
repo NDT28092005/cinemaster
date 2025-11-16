@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Broadcast;
 | used to check if an authenticated user can listen to the channel.
 |
 */
-
+Broadcast::channel('conversation.{id}', function ($user, $id) {
+    return true; // Cho phép join (sau này có thể kiểm tra bảo mật)
+});
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });

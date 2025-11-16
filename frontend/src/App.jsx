@@ -38,11 +38,13 @@ import AdminPromotions from './components/admin/pages/AdminPromotions';
 import AdminEditPromotion from './components/admin/pages/AdminEditPromotion';
 import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
 import AdminReferral from './components/admin/pages/AdminReferral';
+import FloatingProductChatButton from './components/Chat/FloatingProductChatButton';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <FloatingProductChatButton />
         <Routes>
           {/* Frontend */}
           <Route path="/" element={<Home />} />

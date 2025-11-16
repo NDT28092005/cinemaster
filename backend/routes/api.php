@@ -22,8 +22,19 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PromotionUsageController;
 
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Product chatbot endpoints với auth
+    Route::post('/chat/product-chatbot/start', [ChatController::class, 'startProductChat']);
+    Route::post('/chat/product-chatbot/save', [ChatController::class, 'saveProductChatMessage']);
+    Route::get('/chat/product-chatbot/history/{id}', [ChatController::class, 'getProductChatHistory']);
+});
+
+// Product chatbot - public endpoint (có thể thêm auth nếu cần)
+Route::post('/chat/product-advice', [ChatController::class, 'productAdvice']);
 
 Route::post('/orders/calc-shipping', [OrderController::class, 'calcShipping']);
 Route::post('/orders/mark-paid', [OrderController::class, 'markPaid']);
