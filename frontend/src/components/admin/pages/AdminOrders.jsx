@@ -1,29 +1,20 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import {
-  Box,
-  Button,
-  MenuItem,
-  Select,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-} from "@mui/material";
+import AdminLayout from '../../../layouts/AdminLayout';
+import { ShoppingCart, Search, FileSpreadsheet, Download, Upload, Eye } from "lucide-react";
 
-const AdminOrder = () => {
+const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [importFile, setImportFile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch orders với filter & search
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       const res = await axios.get("http://localhost:8000/api/orders", {
         params: { status: statusFilter, search },
       });
@@ -31,6 +22,8 @@ const AdminOrder = () => {
     } catch (err) {
       console.error(err);
       setOrders([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,7 +32,6 @@ const AdminOrder = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, search]);
 
-  // Mở Dialog chi tiết
   const handleOpenDetail = (order) => {
     setSelectedOrder(order);
     setOpenDetail(true);
@@ -50,21 +42,19 @@ const AdminOrder = () => {
     setSelectedOrder(null);
   };
 
-  // Cập nhật trạng thái đơn hàng
   const handleChangeStatus = async (orderId, newStatus) => {
     try {
       await axios.put(`http://localhost:8000/api/orders/${orderId}/status`, {
         status: newStatus,
       });
       fetchOrders();
-      alert("Order status updated");
+      alert("Cập nhật trạng thái đơn hàng thành công!");
     } catch (err) {
       console.error(err);
-      alert("Failed to update status");
+      alert("Không thể cập nhật trạng thái");
     }
   };
 
-  // Export Excel trực tiếp
   const handleExport = async () => {
     try {
       const response = await axios.get(
@@ -81,21 +71,17 @@ const AdminOrder = () => {
       const link = document.createElement("a");
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
-      link.setAttribute(
-        "download",
-        `orders_${timestamp}.xlsx`
-      );
+      link.setAttribute("download", `orders_${timestamp}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      alert("Export failed! " + (err.response?.data?.message || err.message || "Check server route."));
+      alert("Xuất file thất bại! " + (err.response?.data?.message || err.message || "Kiểm tra server route."));
     }
   };
 
-  // Import Excel file
   const handleImport = async () => {
     if (!importFile) {
       alert("Vui lòng chọn file Excel để import");
@@ -119,10 +105,8 @@ const AdminOrder = () => {
       if (response.data.success) {
         alert("Import thành công! " + response.data.message);
         setImportFile(null);
-        // Reset file input
         const fileInput = document.getElementById('import-file-input');
         if (fileInput) fileInput.value = '';
-        // Refresh orders list
         fetchOrders();
       } else {
         alert("Import thất bại: " + response.data.message);
@@ -134,11 +118,9 @@ const AdminOrder = () => {
     }
   };
 
-  // Handle file selection
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // Validate file type
       const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
       if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
         alert("Vui lòng chọn file Excel (.xlsx hoặc .xls)");
@@ -149,185 +131,373 @@ const AdminOrder = () => {
     }
   };
 
+  const formatPrice = (price) => {
+    if (!price) return '0.00';
+    return parseFloat(price).toFixed(2);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN');
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: { bg: 'rgba(255, 193, 7, 0.1)', color: '#ffc107' },
+      processing: { bg: 'rgba(0, 123, 255, 0.1)', color: '#007bff' },
+      completed: { bg: 'rgba(40, 167, 69, 0.1)', color: '#28a745' },
+      cancelled: { bg: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }
+    };
+    return colors[status] || colors.pending;
+  };
+
   return (
-    <Box p={3}>
-      <Typography variant="h4" mb={2}>
-        Quản lý đơn hàng
-      </Typography>
+    <AdminLayout>
+      <div style={{ animation: 'fadeInUp 0.6s ease-out' }}>
+        <h1 style={{ 
+          color: '#5D2A42', 
+          fontSize: '2rem', 
+          fontWeight: '600',
+          marginBottom: '2rem'
+        }}>
+          Quản lý đơn hàng
+        </h1>
 
-      <Box mb={2} display="flex" gap={2}>
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          displayEmpty
-        >
-          <MenuItem value="">Tất cả trạng thái</MenuItem>
-          <MenuItem value="pending">Pending</MenuItem>
-          <MenuItem value="processing">Processing</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-          <MenuItem value="cancelled">Cancelled</MenuItem>
-        </Select>
+        {/* Filter và Search */}
+        <div className="admin-card mb-4">
+          <div className="row g-3 align-items-center">
+            <div className="col-md-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="form-select"
+                style={{
+                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                  borderRadius: '15px',
+                  padding: '0.85rem 1.25rem',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
 
-        <TextField
-          placeholder="Search email / order ID"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+            <div className="col-md-4">
+              <div style={{ position: 'relative' }}>
+                <Search 
+                  size={20} 
+                  style={{ 
+                    position: 'absolute', 
+                    left: '1rem', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: '#999'
+                  }} 
+                />
+                <input
+                  type="text"
+                  placeholder="Search email / order ID"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="form-control"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem 0.85rem 3rem',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+            </div>
 
-        <input
-          accept=".xlsx,.xls"
-          style={{ display: 'none' }}
-          id="import-file-input"
-          type="file"
-          onChange={handleFileChange}
-        />
-        <label htmlFor="import-file-input">
-          <Button
-            variant="outlined"
-            color="secondary"
-            component="span"
-            style={{ marginRight: '8px' }}
-          >
-            {importFile ? `Đã chọn: ${importFile.name}` : 'Chọn file Excel'}
-          </Button>
-        </label>
+            <div className="col-md-6">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
+                <input
+                  accept=".xlsx,.xls"
+                  style={{ display: 'none' }}
+                  id="import-file-input"
+                  type="file"
+                  onChange={handleFileChange}
+                />
+                <label htmlFor="import-file-input" style={{ margin: 0 }}>
+                  <button
+                    type="button"
+                    className="admin-btn"
+                    style={{ 
+                      padding: '0.75rem 1.25rem',
+                      background: 'white',
+                      color: '#FB6376',
+                      border: '2px solid rgba(251, 99, 118, 0.3)',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <FileSpreadsheet size={18} style={{ marginRight: '0.5rem' }} />
+                    CHỌN FILE EXCEL
+                  </button>
+                </label>
 
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleImport}
-          disabled={!importFile}
-          style={{ marginRight: '8px' }}
-        >
-          Import Excel
-        </Button>
-
-        <Button variant="contained" color="primary" onClick={handleExport}>
-          Export Excel
-        </Button>
-      </Box>
-
-      <Box>
-        <table width="100%" border="1" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>User Email</th>
-              <th>Total Amount</th>
-              <th>Status</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length > 0 ? (
-              orders.map((order) => (
-                <tr key={order.id}>
-                  <td>{order.id}</td>
-                  <td>{order.user?.email || "Guest"}</td>
-                  <td>{order.total_amount}</td>
-                  <td>{order.status}</td>
-                  <td>
-                    {order.created_at
-                      ? new Date(order.created_at).toLocaleString()
-                      : ""}
-                  </td>
-                  <td>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => handleOpenDetail(order)}
-                      style={{ marginRight: "8px" }}
-                    >
-                      Chi tiết
-                    </Button>
-
-                    <Select
-                      value={order.status}
-                      onChange={(e) =>
-                        handleChangeStatus(order.id, e.target.value)
-                      }
-                      size="small"
-                    >
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="processing">Processing</MenuItem>
-                      <MenuItem value="completed">Completed</MenuItem>
-                      <MenuItem value="cancelled">Cancelled</MenuItem>
-                    </Select>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} style={{ textAlign: "center" }}>
-                  Không có đơn hàng
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Box>
-
-      {/* Dialog chi tiết order */}
-      <Dialog
-        open={openDetail}
-        onClose={handleCloseDetail}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Chi tiết đơn hàng</DialogTitle>
-        <DialogContent>
-          {selectedOrder ? (
-            <>
-              <Typography>
-                <strong>User:</strong> {selectedOrder.user?.email || "Guest"}
-              </Typography>
-              <Typography>
-                <strong>Total:</strong> {selectedOrder.total_amount}
-              </Typography>
-              <Typography>
-                <strong>Address:</strong> {selectedOrder.delivery_address}
-              </Typography>
-              <Typography>
-                <strong>Status:</strong> {selectedOrder.status}
-              </Typography>
-
-              <Box mt={2}>
-                <Typography variant="h6">Sản phẩm:</Typography>
-                <table
-                  width="100%"
-                  border="1"
-                  style={{ borderCollapse: "collapse" }}
+                <button
+                  type="button"
+                  className="admin-btn"
+                  onClick={handleImport}
+                  disabled={!importFile}
+                  style={{ 
+                    padding: '0.75rem 1.25rem',
+                    background: !importFile ? '#e9ecef' : '#6c757d',
+                    color: !importFile ? '#6c757d' : 'white',
+                    border: 'none',
+                    fontWeight: '500',
+                    opacity: !importFile ? 0.6 : 1,
+                    cursor: !importFile ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  <thead>
+                  <Upload size={18} style={{ marginRight: '0.5rem' }} />
+                  IMPORT EXCEL
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-btn"
+                  onClick={handleExport}
+                  style={{ 
+                    padding: '0.75rem 1.25rem',
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '500'
+                  }}
+                >
+                  <Download size={18} style={{ marginRight: '0.5rem' }} />
+                  EXPORT EXCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders Table */}
+        {loading ? (
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
+            <div className="loading-spinner" style={{ 
+              width: '60px', 
+              height: '60px', 
+              border: '5px solid rgba(251, 99, 118, 0.2)', 
+              borderTopColor: '#FB6376', 
+              borderRightColor: '#FCB1A6', 
+              borderRadius: '50%', 
+              animation: 'spin 1s linear infinite'
+            }}></div>
+          </div>
+        ) : (
+          <div className="admin-card">
+            <div className="table-responsive">
+              <table className="admin-table" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>User Email</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.length > 0 ? (
+                    orders.map((order) => {
+                      const statusStyle = getStatusColor(order.status);
+                      return (
+                        <tr key={order.id}>
+                          <td style={{ fontWeight: '600' }}>{order.id}</td>
+                          <td>{order.user?.email || "Guest"}</td>
+                          <td style={{ fontWeight: '500' }}>
+                            {formatPrice(order.total_amount || 0)}
+                          </td>
+                          <td>
+                            <span style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '15px',
+                              fontSize: '0.85rem',
+                              background: statusStyle.bg,
+                              color: statusStyle.color,
+                              fontWeight: '500'
+                            }}>
+                              {order.status || 'pending'}
+                            </span>
+                          </td>
+                          <td>{formatDate(order.created_at)}</td>
+                          <td>
+                            <div className="d-flex gap-2 align-items-center">
+                              <button
+                                onClick={() => handleOpenDetail(order)}
+                                className="admin-btn"
+                                style={{ 
+                                  padding: '0.5rem 1rem',
+                                  background: 'transparent',
+                                  color: '#007bff',
+                                  border: '1px solid #007bff',
+                                  borderRadius: '8px',
+                                  fontSize: '0.9rem',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                CHI TIẾT
+                              </button>
+                              <select
+                                value={order.status}
+                                onChange={(e) => handleChangeStatus(order.id, e.target.value)}
+                                className="form-select"
+                                style={{
+                                  border: '1px solid rgba(0, 0, 0, 0.2)',
+                                  borderRadius: '8px',
+                                  padding: '0.5rem 0.75rem',
+                                  fontSize: '0.9rem',
+                                  minWidth: '120px',
+                                  background: 'white'
+                                }}
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
                     <tr>
-                      <th>Product</th>
-                      <th>Quantity</th>
-                      <th>Price</th>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                        Không có đơn hàng nào
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedOrder.items || []).map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.product?.name || "Unknown"}</td>
-                        <td>{item.quantity}</td>
-                        <td>{item.price}</td>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Detail Modal */}
+        {openDetail && selectedOrder && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '2rem'
+            }}
+            onClick={handleCloseDetail}
+          >
+            <div 
+              className="admin-card"
+              style={{ 
+                maxWidth: '800px', 
+                width: '100%',
+                maxHeight: '90vh',
+                overflow: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2 style={{ 
+                  color: '#5D2A42', 
+                  fontSize: '1.5rem', 
+                  fontWeight: '600',
+                  margin: 0
+                }}>
+                  Chi tiết đơn hàng #{selectedOrder.id}
+                </h2>
+                <button
+                  onClick={handleCloseDetail}
+                  className="admin-btn admin-btn-secondary"
+                  style={{ padding: '0.5rem 0.75rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                  <strong style={{ color: '#5D2A42' }}>User:</strong> {selectedOrder.user?.email || "Guest"}
+                </p>
+                <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                  <strong style={{ color: '#5D2A42' }}>Tổng tiền:</strong> {formatPrice(selectedOrder.total_amount || 0)}
+                </p>
+                <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                  <strong style={{ color: '#5D2A42' }}>Địa chỉ giao hàng:</strong> {selectedOrder.delivery_address || 'N/A'}
+                </p>
+                <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                  <strong style={{ color: '#5D2A42' }}>Trạng thái:</strong>{' '}
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '15px',
+                    fontSize: '0.85rem',
+                    ...getStatusColor(selectedOrder.status),
+                    fontWeight: '500'
+                  }}>
+                    {selectedOrder.status}
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <h3 style={{ 
+                  color: '#5D2A42', 
+                  fontSize: '1.2rem', 
+                  fontWeight: '600',
+                  marginBottom: '1rem'
+                }}>
+                  Sản phẩm:
+                </h3>
+                <div className="table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Sản phẩm</th>
+                        <th>Số lượng</th>
+                        <th>Giá</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Box>
-            </>
-          ) : (
-            <Typography>Loading...</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDetail}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                    </thead>
+                    <tbody>
+                      {(selectedOrder.items || []).length > 0 ? (
+                        selectedOrder.items.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.product?.name || "Unknown"}</td>
+                            <td>{item.quantity}</td>
+                            <td>{formatPrice(item.price || 0)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} style={{ textAlign: 'center', padding: '1rem', color: '#666' }}>
+                            Không có sản phẩm
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AdminLayout>
   );
 };
 
-export default AdminOrder;
+export default AdminOrders;

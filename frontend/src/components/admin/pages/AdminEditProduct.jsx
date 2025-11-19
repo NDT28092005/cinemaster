@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { getProduct, updateProduct } from "../../../api/product";
 import { getCategories } from "../../../api/category";
 import { getOccasions } from "../../../api/occasion";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import AdminLayout from '../../../layouts/AdminLayout';
+import { ShoppingBag, Save, ArrowLeft, Image as ImageIcon } from "lucide-react";
 
 export default function AdminEditProduct() {
   const { id } = useParams();
@@ -17,11 +19,13 @@ export default function AdminEditProduct() {
     is_active: true,
   });
 
-  const [images, setImages] = useState([]); // Ảnh mới upload
-  const [previewUrls, setPreviewUrls] = useState([]); // Preview ảnh mới
-  const [oldImageUrl, setOldImageUrl] = useState(""); // Ảnh cũ hiển thị
+  const [images, setImages] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [oldImageUrl, setOldImageUrl] = useState("");
   const [categories, setCategories] = useState([]);
   const [occasions, setOccasions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -29,6 +33,7 @@ export default function AdminEditProduct() {
 
   const loadData = async () => {
     try {
+      setLoadingData(true);
       const [prodRes, catsRes, occRes] = await Promise.all([
         getProduct(id),
         getCategories(),
@@ -44,17 +49,20 @@ export default function AdminEditProduct() {
         is_active: product.is_active,
       });
       setOldImageUrl(product.image_url || "");
-      setCategories(catsRes.data);
-      setOccasions(occRes.data);
+      setCategories(catsRes.data || []);
+      setOccasions(occRes.data || []);
     } catch (err) {
       console.error("❌ Lỗi khi load dữ liệu sản phẩm:", err.response?.data || err.message);
+      alert("Lỗi khi tải thông tin sản phẩm");
+    } finally {
+      setLoadingData(false);
     }
   };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     setImages(files);
-    setPreviewUrls(files.map((file) => URL.createObjectURL(file))); // Tạo preview
+    setPreviewUrls(files.map((file) => URL.createObjectURL(file)));
   };
 
   const handleSubmit = async (e) => {
@@ -63,114 +71,309 @@ export default function AdminEditProduct() {
 
     Object.entries(form).forEach(([key, value]) => {
       if (key === "is_active") {
-        data.append(key, value ? 1 : 0); // gửi boolean đúng cho Laravel
+        data.append(key, value ? 1 : 0);
       } else {
         data.append(key, value);
       }
     });
 
-    // Nếu có ảnh mới, append vào formData
     if (images.length > 0) {
       images.forEach((file) => data.append("images[]", file));
     } else {
-      // Nếu không có ảnh mới, gửi một cờ giữ nguyên ảnh cũ
       data.append("keep_old_image", 1);
     }
 
     try {
+      setLoading(true);
       await updateProduct(id, data);
       alert("✅ Cập nhật sản phẩm thành công!");
       navigate("/admin/products");
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật:", err.response?.data || err.message);
       alert("❌ Không thể cập nhật sản phẩm. Kiểm tra console.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loadingData) {
+    return (
+      <AdminLayout>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+          <div className="loading-spinner" style={{ 
+            width: '60px', 
+            height: '60px', 
+            border: '5px solid rgba(251, 99, 118, 0.2)', 
+            borderTopColor: '#FB6376', 
+            borderRightColor: '#FCB1A6', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite'
+          }}></div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <h2>✏️ Chỉnh sửa sản phẩm</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Tên:</label>
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
-          <label>Giá:</label>
-          <input
-            type="number"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <label>Tồn kho:</label>
-          <input
-            type="number"
-            value={form.stock_quantity}
-            onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <label>Danh mục:</label>
-          <select
-            value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+    <AdminLayout>
+      <div style={{ animation: 'fadeInUp 0.6s ease-out' }}>
+        <div className="d-flex align-items-center mb-4">
+          <Link 
+            to="/admin/products" 
+            className="admin-btn admin-btn-secondary me-3"
+            style={{ padding: '0.5rem 0.75rem' }}
           >
-            <option value="">--Chọn--</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <ArrowLeft size={16} />
+          </Link>
+          <h1 style={{ 
+            color: '#5D2A42', 
+            fontSize: '2rem', 
+            fontWeight: '600',
+            margin: 0
+          }}>
+            Chỉnh sửa sản phẩm
+          </h1>
         </div>
 
-        <div>
-          <label>Dịp:</label>
-          <select
-            value={form.occasion_id}
-            onChange={(e) => setForm({ ...form, occasion_id: e.target.value })}
-          >
-            <option value="">--Chọn--</option>
-            {occasions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="admin-card">
+          <div className="admin-card-title">
+            <ShoppingBag size={20} />
+            Thông tin sản phẩm
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="row">
+              <div className="col-md-6 mb-4">
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  fontWeight: '500',
+                  color: '#5D2A42'
+                }}>
+                  Tên sản phẩm <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                  className="form-control"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem',
+                    fontSize: '1rem'
+                  }}
+                  placeholder="Nhập tên sản phẩm..."
+                />
+              </div>
 
-        <div>
-          <label>Trạng thái:</label>
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-          />{" "}
-          Kích hoạt
-        </div>
+              <div className="col-md-6 mb-4">
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  fontWeight: '500',
+                  color: '#5D2A42'
+                }}>
+                  Giá <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  required
+                  className="form-control"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem',
+                    fontSize: '1rem'
+                  }}
+                  placeholder="0"
+                />
+              </div>
+            </div>
 
-        <div>
-          <label>Ảnh sản phẩm:</label>
-          {/* Nếu có preview ảnh mới, hiển thị preview */}
-          {previewUrls.length > 0
-            ? previewUrls.map((url, idx) => (
-                <img key={idx} src={url} alt="preview" width={120} style={{ marginRight: 10 }} />
-              ))
-            : oldImageUrl && <img src={oldImageUrl} alt="ảnh cũ" width={120} />}
-          <input type="file" multiple onChange={handleImageChange} />
-        </div>
+            <div className="row">
+              <div className="col-md-6 mb-4">
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  fontWeight: '500',
+                  color: '#5D2A42'
+                }}>
+                  Tồn kho
+                </label>
+                <input
+                  type="number"
+                  value={form.stock_quantity}
+                  onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
+                  className="form-control"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem',
+                    fontSize: '1rem'
+                  }}
+                  placeholder="0"
+                />
+              </div>
 
-        <button type="submit">Cập nhật</button>
-      </form>
-    </div>
+              <div className="col-md-6 mb-4 d-flex align-items-end">
+                <div className="d-flex align-items-center" style={{ 
+                  padding: '0.85rem 1.25rem',
+                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                  borderRadius: '15px',
+                  width: '100%'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    style={{ marginRight: '0.5rem', width: '20px', height: '20px' }}
+                  />
+                  <label style={{ margin: 0, fontWeight: '500', color: '#5D2A42' }}>
+                    Kích hoạt sản phẩm
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col-md-6 mb-4">
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  fontWeight: '500',
+                  color: '#5D2A42'
+                }}>
+                  Danh mục
+                </label>
+                <select
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                  className="form-select"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="">--Chọn danh mục--</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-md-6 mb-4">
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  fontWeight: '500',
+                  color: '#5D2A42'
+                }}>
+                  Dịp lễ
+                </label>
+                <select
+                  value={form.occasion_id}
+                  onChange={(e) => setForm({ ...form, occasion_id: e.target.value })}
+                  className="form-select"
+                  style={{
+                    border: '2px solid rgba(251, 99, 118, 0.2)',
+                    borderRadius: '15px',
+                    padding: '0.85rem 1.25rem',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="">--Chọn dịp lễ--</option>
+                  {occasions.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                fontWeight: '500',
+                color: '#5D2A42'
+              }}>
+                <ImageIcon size={16} style={{ marginRight: '0.5rem', display: 'inline' }} />
+                Ảnh sản phẩm (có thể chọn nhiều ảnh)
+              </label>
+              {previewUrls.length > 0 ? (
+                <div className="row g-2 mb-3">
+                  {previewUrls.map((url, idx) => (
+                    <div key={idx} className="col-md-3">
+                      <img 
+                        src={url} 
+                        alt="preview" 
+                        style={{
+                          width: '100%',
+                          height: '150px',
+                          objectFit: 'cover',
+                          borderRadius: '10px',
+                          border: '2px solid rgba(251, 99, 118, 0.2)'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : oldImageUrl && (
+                <div className="mb-3">
+                  <p style={{ marginBottom: '0.5rem', color: '#666' }}>Ảnh hiện tại:</p>
+                  <img 
+                    src={oldImageUrl} 
+                    alt="ảnh cũ" 
+                    style={{
+                      maxWidth: '200px',
+                      height: '150px',
+                      objectFit: 'cover',
+                      borderRadius: '10px',
+                      border: '2px solid rgba(251, 99, 118, 0.2)'
+                    }}
+                  />
+                </div>
+              )}
+              <input 
+                type="file" 
+                multiple 
+                onChange={handleImageChange}
+                className="form-control"
+                style={{
+                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                  borderRadius: '15px',
+                  padding: '0.85rem 1.25rem',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div className="d-flex gap-2">
+              <button 
+                type="submit" 
+                className="admin-btn admin-btn-primary"
+                disabled={loading}
+              >
+                <Save size={20} style={{ marginRight: '0.5rem' }} />
+                {loading ? 'Đang cập nhật...' : 'Cập nhật'}
+              </button>
+              <Link 
+                to="/admin/products" 
+                className="admin-btn admin-btn-secondary"
+              >
+                Hủy
+              </Link>
+            </div>
+          </form>
+        </div>
+      </div>
+    </AdminLayout>
   );
 }
