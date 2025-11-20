@@ -19,9 +19,12 @@ export default function AdminEditProduct() {
     is_active: true,
   });
 
-  const [images, setImages] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
-  const [oldImageUrl, setOldImageUrl] = useState("");
+  const [mainImage, setMainImage] = useState(null);        // ảnh chính mới upload
+  const [oldMainImage, setOldMainImage] = useState("");    // ảnh chính cũ
+
+  const [oldImages, setOldImages] = useState([]);          // danh sách ảnh phụ cũ
+  const [previewImages, setPreviewImages] = useState([]);  // preview ảnh phụ mới
+
   const [categories, setCategories] = useState([]);
   const [occasions, setOccasions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +42,9 @@ export default function AdminEditProduct() {
         getCategories(),
         getOccasions(),
       ]);
+
       const product = prodRes.data;
+
       setForm({
         name: product.name,
         price: product.price,
@@ -48,9 +53,12 @@ export default function AdminEditProduct() {
         occasion_id: product.occasion_id || "",
         is_active: product.is_active,
       });
-      setOldImageUrl(product.image_url || "");
-      setCategories(catsRes.data || []);
-      setOccasions(occRes.data || []);
+
+      setOldMainImage(product.image_url || ""); // ảnh chính
+      setOldImages(product.images || []);       // ảnh phụ (từ bảng product_images)
+
+      setCategories(catsRes.data);
+      setOccasions(occRes.data);
     } catch (err) {
       console.error("❌ Lỗi khi load dữ liệu sản phẩm:", err.response?.data || err.message);
       alert("Lỗi khi tải thông tin sản phẩm");
@@ -59,10 +67,15 @@ export default function AdminEditProduct() {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleMainImageChange = (e) => {
+    setMainImage(e.target.files[0]);
+  };
+
+  const handleOtherImagesChange = (e) => {
     const files = Array.from(e.target.files);
-    setImages(files);
-    setPreviewUrls(files.map((file) => URL.createObjectURL(file)));
+    setPreviewImages(files.map((file) => URL.createObjectURL(file)));
+    setOldImages([]); // clear ảnh cũ để preview ảnh mới
+    setForm((prev) => ({ ...prev, images: files }));
   };
 
   const handleSubmit = async (e) => {
@@ -77,10 +90,12 @@ export default function AdminEditProduct() {
       }
     });
 
-    if (images.length > 0) {
-      images.forEach((file) => data.append("images[]", file));
-    } else {
-      data.append("keep_old_image", 1);
+    // ✅ Gửi ảnh chính
+    if (mainImage) data.append("main_image", mainImage);
+
+    // ✅ Gửi ảnh phụ
+    if (form.images?.length > 0) {
+      form.images.forEach((file) => data.append("images[]", file));
     }
 
     try {
@@ -96,284 +111,121 @@ export default function AdminEditProduct() {
     }
   };
 
-  if (loadingData) {
-    return (
-      <AdminLayout>
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-          <div className="loading-spinner" style={{ 
-            width: '60px', 
-            height: '60px', 
-            border: '5px solid rgba(251, 99, 118, 0.2)', 
-            borderTopColor: '#FB6376', 
-            borderRightColor: '#FCB1A6', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite'
-          }}></div>
+  return (
+    <div className="p-6">
+      <h2>✏️ Chỉnh sửa sản phẩm</h2>
+      <form onSubmit={handleSubmit}>
+        {/* Tên */}
+        <div>
+          <label>Tên:</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
         </div>
       </AdminLayout>
     );
   }
 
-  return (
-    <AdminLayout>
-      <div style={{ animation: 'fadeInUp 0.6s ease-out' }}>
-        <div className="d-flex align-items-center mb-4">
-          <Link 
-            to="/admin/products" 
-            className="admin-btn admin-btn-secondary me-3"
-            style={{ padding: '0.5rem 0.75rem' }}
+        {/* Giá */}
+        <div>
+          <label>Giá:</label>
+          <input
+            type="number"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+          />
+        </div>
+
+        {/* Tồn kho */}
+        <div>
+          <label>Tồn kho:</label>
+          <input
+            type="number"
+            value={form.stock_quantity}
+            onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
+          />
+        </div>
+
+        {/* Danh mục */}
+        <div>
+          <label>Danh mục:</label>
+          <select
+            value={form.category_id}
+            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
           >
-            <ArrowLeft size={16} />
-          </Link>
-          <h1 style={{ 
-            color: '#5D2A42', 
-            fontSize: '2rem', 
-            fontWeight: '600',
-            margin: 0
-          }}>
-            Chỉnh sửa sản phẩm
-          </h1>
+            <option value="">--Chọn--</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="admin-card">
-          <div className="admin-card-title">
-            <ShoppingBag size={20} />
-            Thông tin sản phẩm
-          </div>
-          <form onSubmit={handleSubmit}>
-            <div className="row">
-              <div className="col-md-6 mb-4">
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  color: '#5D2A42'
-                }}>
-                  Tên sản phẩm <span style={{ color: '#dc3545' }}>*</span>
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  className="form-control"
-                  style={{
-                    border: '2px solid rgba(251, 99, 118, 0.2)',
-                    borderRadius: '15px',
-                    padding: '0.85rem 1.25rem',
-                    fontSize: '1rem'
-                  }}
-                  placeholder="Nhập tên sản phẩm..."
-                />
-              </div>
-
-              <div className="col-md-6 mb-4">
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  color: '#5D2A42'
-                }}>
-                  Giá <span style={{ color: '#dc3545' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  required
-                  className="form-control"
-                  style={{
-                    border: '2px solid rgba(251, 99, 118, 0.2)',
-                    borderRadius: '15px',
-                    padding: '0.85rem 1.25rem',
-                    fontSize: '1rem'
-                  }}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-md-6 mb-4">
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  color: '#5D2A42'
-                }}>
-                  Tồn kho
-                </label>
-                <input
-                  type="number"
-                  value={form.stock_quantity}
-                  onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
-                  className="form-control"
-                  style={{
-                    border: '2px solid rgba(251, 99, 118, 0.2)',
-                    borderRadius: '15px',
-                    padding: '0.85rem 1.25rem',
-                    fontSize: '1rem'
-                  }}
-                  placeholder="0"
-                />
-              </div>
-
-              <div className="col-md-6 mb-4 d-flex align-items-end">
-                <div className="d-flex align-items-center" style={{ 
-                  padding: '0.85rem 1.25rem',
-                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                  borderRadius: '15px',
-                  width: '100%'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={form.is_active}
-                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                    style={{ marginRight: '0.5rem', width: '20px', height: '20px' }}
-                  />
-                  <label style={{ margin: 0, fontWeight: '500', color: '#5D2A42' }}>
-                    Kích hoạt sản phẩm
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-md-6 mb-4">
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  color: '#5D2A42'
-                }}>
-                  Danh mục
-                </label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                  className="form-select"
-                  style={{
-                    border: '2px solid rgba(251, 99, 118, 0.2)',
-                    borderRadius: '15px',
-                    padding: '0.85rem 1.25rem',
-                    fontSize: '1rem'
-                  }}
-                >
-                  <option value="">--Chọn danh mục--</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-md-6 mb-4">
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  color: '#5D2A42'
-                }}>
-                  Dịp lễ
-                </label>
-                <select
-                  value={form.occasion_id}
-                  onChange={(e) => setForm({ ...form, occasion_id: e.target.value })}
-                  className="form-select"
-                  style={{
-                    border: '2px solid rgba(251, 99, 118, 0.2)',
-                    borderRadius: '15px',
-                    padding: '0.85rem 1.25rem',
-                    fontSize: '1rem'
-                  }}
-                >
-                  <option value="">--Chọn dịp lễ--</option>
-                  {occasions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.5rem', 
-                fontWeight: '500',
-                color: '#5D2A42'
-              }}>
-                <ImageIcon size={16} style={{ marginRight: '0.5rem', display: 'inline' }} />
-                Ảnh sản phẩm (có thể chọn nhiều ảnh)
-              </label>
-              {previewUrls.length > 0 ? (
-                <div className="row g-2 mb-3">
-                  {previewUrls.map((url, idx) => (
-                    <div key={idx} className="col-md-3">
-                      <img 
-                        src={url} 
-                        alt="preview" 
-                        style={{
-                          width: '100%',
-                          height: '150px',
-                          objectFit: 'cover',
-                          borderRadius: '10px',
-                          border: '2px solid rgba(251, 99, 118, 0.2)'
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : oldImageUrl && (
-                <div className="mb-3">
-                  <p style={{ marginBottom: '0.5rem', color: '#666' }}>Ảnh hiện tại:</p>
-                  <img 
-                    src={oldImageUrl} 
-                    alt="ảnh cũ" 
-                    style={{
-                      maxWidth: '200px',
-                      height: '150px',
-                      objectFit: 'cover',
-                      borderRadius: '10px',
-                      border: '2px solid rgba(251, 99, 118, 0.2)'
-                    }}
-                  />
-                </div>
-              )}
-              <input 
-                type="file" 
-                multiple 
-                onChange={handleImageChange}
-                className="form-control"
-                style={{
-                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                  borderRadius: '15px',
-                  padding: '0.85rem 1.25rem',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-
-            <div className="d-flex gap-2">
-              <button 
-                type="submit" 
-                className="admin-btn admin-btn-primary"
-                disabled={loading}
-              >
-                <Save size={20} style={{ marginRight: '0.5rem' }} />
-                {loading ? 'Đang cập nhật...' : 'Cập nhật'}
-              </button>
-              <Link 
-                to="/admin/products" 
-                className="admin-btn admin-btn-secondary"
-              >
-                Hủy
-              </Link>
-            </div>
-          </form>
+        {/* Dịp */}
+        <div>
+          <label>Dịp:</label>
+          <select
+            value={form.occasion_id}
+            onChange={(e) => setForm({ ...form, occasion_id: e.target.value })}
+          >
+            <option value="">--Chọn--</option>
+            {occasions.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
         </div>
-      </div>
-    </AdminLayout>
+
+        {/* Trạng thái */}
+        <div>
+          <label>Trạng thái:</label>
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+          />{" "}
+          Kích hoạt
+        </div>
+
+        {/* Ảnh chính */}
+        <div style={{ marginTop: 20 }}>
+          <label>Ảnh chính:</label>
+          <br />
+          {oldMainImage && (
+            <img src={oldMainImage} width={150} alt="Ảnh chính" />
+          )}
+          <input type="file" onChange={handleMainImageChange} />
+        </div>
+
+        {/* Ảnh phụ */}
+        <div style={{ marginTop: 20 }}>
+          <label>Ảnh phụ:</label>
+
+          {/* Hiển thị ảnh phụ cũ */}
+          {oldImages.length > 0 && (
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {oldImages.map((img) => (
+                <img key={img.id} src={img.image_url} width={120} alt="Ảnh phụ cũ" />
+              ))}
+            </div>
+          )}
+
+          {/* Preview ảnh phụ mới */}
+          {previewImages.length > 0 && (
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {previewImages.map((url, idx) => (
+                <img key={idx} src={url} width={120} alt="Preview ảnh phụ mới" />
+              ))}
+            </div>
+          )}
+
+          <input type="file" multiple onChange={handleOtherImagesChange} />
+        </div>
+
+        <button type="submit" style={{ marginTop: 20 }}>
+          ✅ Cập nhật
+        </button>
+      </form>
+    </div>
   );
 }

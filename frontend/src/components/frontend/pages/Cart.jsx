@@ -96,12 +96,41 @@ export default function Cart() {
       alert("❌ Lỗi khi cập nhật số lượng: " + (err.response?.data?.message || err.message));
     }
   };
+  const updateQuantity = (cartId, newQty) => {
+    const currentToken = token || localStorage.getItem("token");
 
-  // Xóa sản phẩm khỏi giỏ hàng
-  const removeItem = async (itemId, productId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?")) {
-      return;
-    }
+    axios.put("http://localhost:8000/api/cart/update", {
+      cart_id: cartId,
+      quantity: newQty
+    }, {
+      headers: { Authorization: `Bearer ${currentToken}` }
+    })
+      .then(res => {
+        setCart(res.data);
+      })
+      .catch(err => console.error(err));
+  };
+
+  const removeFromCart = (cartId) => {
+    const currentToken = token || localStorage.getItem("token");
+
+    axios.delete("http://localhost:8000/api/cart/remove", {
+      headers: { Authorization: `Bearer ${currentToken}` },
+      data: { cart_id: cartId }
+    })
+      .then(res => {
+        setCart(res.data);
+      })
+      .catch(err => console.error(err));
+  };
+  // Poll Google Sheet
+  const checkPaymentFromGoogleAPI = async () => {
+    try {
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbyjHTm8gtq_qPG_GUEV970kCuAFuhGd3dlEqqPjK-zsvUssBzdeOuc0si8BjVx31nj9/exec"
+      );
+      const data = await response.json();
+      if (!data?.data?.length) return;
 
     const currentToken = token || localStorage.getItem("token");
     if (!currentToken) {
