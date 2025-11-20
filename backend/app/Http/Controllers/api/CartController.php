@@ -27,7 +27,8 @@ class CartController extends Controller
     }
 
     /**
-     * ➕ Thêm sản phẩm vào giỏ hàng
+     * ➕ Thêm sản phẩm vào giỏ hàng (hoặc cập nhật số lượng)
+     * quantity có thể âm để giảm số lượng
      */
     public function add(Request $request)
     {
@@ -36,30 +37,55 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity'   => 'required|integer|min:1'
+            'quantity'   => 'required|integer' // Bỏ min:1 để cho phép số âm
         ]);
 
+        // Tìm cart item hiện tại
         $cartItem = Cart::where('user_id', $user->id)
             ->where('product_id', $validated['product_id'])
             ->first();
 
         if ($cartItem) {
-            // ✅ CÓ rồi → tăng số lượng
-            $cartItem->quantity += $validated['quantity'];
-            $cartItem->save();
+            // Cập nhật số lượng
+            $newQuantity = $cartItem->quantity + $validated['quantity'];
+            
+            if ($newQuantity <= 0) {
+                // Nếu số lượng <= 0, xóa item khỏi giỏ hàng
+                $cartItem->delete();
+                return response()->json([
+                    'message' => 'Sản phẩm đã được xóa khỏi giỏ hàng',
+                    'cart_item' => null
+                ]);
+            } else {
+                // Cập nhật số lượng mới
+                $cartItem->quantity = $newQuantity;
+                $cartItem->save();
+                
+                return response()->json([
+                    'message' => 'Cập nhật số lượng thành công',
+                    'cart_item' => $cartItem->fresh('product')
+                ]);
+            }
         } else {
-            // ✅ CHƯA có → tạo mới
-            $cartItem = Cart::create([
-                'user_id'    => $user->id,
-                'product_id' => $validated['product_id'],
-                'quantity'   => $validated['quantity'], // GIỮ NGUYÊN 1, không nhân đôi
-            ]);
-        }
+            // Nếu chưa có trong giỏ hàng và quantity > 0, tạo mới
+            if ($validated['quantity'] > 0) {
+                $cartItem = Cart::create([
+                    'user_id' => $user->id,
+                    'product_id' => $validated['product_id'],
+                    'quantity' => $validated['quantity']
+                ]);
 
-        return response()->json([
-            'message' => 'Thêm sản phẩm vào giỏ hàng thành công',
-            'cart_item' => $cartItem
-        ]);
+                return response()->json([
+                    'message' => 'Thêm sản phẩm vào giỏ hàng thành công',
+                    'cart_item' => $cartItem->fresh('product')
+                ]);
+            } else {
+                // Nếu quantity <= 0 và chưa có item, trả về lỗi
+                return response()->json([
+                    'message' => 'Không thể giảm số lượng sản phẩm chưa có trong giỏ hàng'
+                ], 400);
+            }
+        }
     }
 
 

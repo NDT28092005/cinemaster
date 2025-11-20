@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { getProduct, updateProduct } from "../../../api/product";
 import { getCategories } from "../../../api/category";
 import { getOccasions } from "../../../api/occasion";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import AdminLayout from '../../../layouts/AdminLayout';
+import { ShoppingBag, Save, ArrowLeft, Image as ImageIcon } from "lucide-react";
 
 export default function AdminEditProduct() {
   const { id } = useParams();
@@ -25,6 +27,8 @@ export default function AdminEditProduct() {
 
   const [categories, setCategories] = useState([]);
   const [occasions, setOccasions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -32,6 +36,7 @@ export default function AdminEditProduct() {
 
   const loadData = async () => {
     try {
+      setLoadingData(true);
       const [prodRes, catsRes, occRes] = await Promise.all([
         getProduct(id),
         getCategories(),
@@ -56,6 +61,9 @@ export default function AdminEditProduct() {
       setOccasions(occRes.data);
     } catch (err) {
       console.error("❌ Lỗi khi load dữ liệu sản phẩm:", err.response?.data || err.message);
+      alert("Lỗi khi tải thông tin sản phẩm");
+    } finally {
+      setLoadingData(false);
     }
   };
 
@@ -91,12 +99,15 @@ export default function AdminEditProduct() {
     }
 
     try {
+      setLoading(true);
       await updateProduct(id, data);
       alert("✅ Cập nhật sản phẩm thành công!");
       navigate("/admin/products");
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật:", err.response?.data || err.message);
       alert("❌ Không thể cập nhật sản phẩm. Kiểm tra console.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,6 +124,9 @@ export default function AdminEditProduct() {
             required
           />
         </div>
+      </AdminLayout>
+    );
+  }
 
         {/* Giá */}
         <div>

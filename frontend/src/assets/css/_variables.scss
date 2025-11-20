@@ -1,0 +1,34 @@
+// Color palette
+$color-dark: #5D2A42; // Deep burgundy
+$color-coral: #FB6376; // Vibrant coral
+$color-peach: #FCB1A6; // Soft peach
+$color-light-peach: #FFDCCC; // Very light peach
+$color-cream: #FFF9EC; // Cream white
+
+$primary-color: $color-dark;
+$secondary-color: $color-coral;
+$text-color: #333;
+$text-color-light: #666;
+$text-white: #fff;
+
+// Layout variables
+$search-width: 200px;
+$login-width: 100px;
+$total-right-width: $search-width+$login-width+20px;
+$button-min-width: 120px;
+$button-max-width: 150px;
+$border-radius: 4px;
+
+// Accent colors
+$accent-1: $color-coral;
+$accent-2: $color-peach;
+$accent-3: $color-light-peach;
+$surface-1: rgba(255, 220, 204, 0.15);
+$surface-2: rgba(255, 220, 204, 0.25);
+$border-1: rgba(93, 42, 66, 0.2);
+$hover-bg: rgba(251, 99, 118, 0.1);
+$hover-border: rgba(251, 99, 118, 0.2);
+
+
+
+

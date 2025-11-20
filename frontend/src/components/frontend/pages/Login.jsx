@@ -1,8 +1,11 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
+import Header from '../../common/Header';
+import Footer from '../../common/Footer';
+import { FaLock, FaEnvelope, FaSignInAlt } from 'react-icons/fa';
 
 export default function Login() {
   const { setUser, setToken } = useContext(AuthContext);
@@ -11,6 +14,20 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+
+  // SEO Meta Tags
+  useEffect(() => {
+    document.title = "Đăng nhập - Cửa hàng quà tặng";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Đăng nhập vào tài khoản của bạn để mua sắm quà tặng và quản lý đơn hàng. Đăng nhập nhanh với Google.');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'description';
+      meta.content = 'Đăng nhập vào tài khoản của bạn để mua sắm quà tặng và quản lý đơn hàng. Đăng nhập nhanh với Google.';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+  }, []);
 
   // Nơi sẽ quay lại sau khi đăng nhập
   const from = location.state?.from?.pathname || '/';
@@ -124,64 +141,104 @@ export default function Login() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h2>Đăng nhập</h2>
-          <p>Chào mừng bạn trở lại!</p>
-        </div>
-
-        {error && (
-          <div className="login-error">
-            ⚠️ {error}
+    <div>
+      <Header />
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-header">
+            <div style={{
+              fontSize: '3rem',
+              color: '#FB6376',
+              marginBottom: '1rem',
+              display: 'flex',
+              justifyContent: 'center'
+            }}>
+              <FaSignInAlt />
+            </div>
+            <h1>Đăng nhập</h1>
+            <p>Chào mừng bạn trở lại!</p>
           </div>
-        )}
 
-        <form onSubmit={handleLogin} className="login-form">
-          <div className="form-group">
-            <input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
+          {error && (
+            <div className="login-error error">
+              ⚠️ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="form-group">
+              <div style={{ position: 'relative' }}>
+                <FaEnvelope style={{
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#FB6376',
+                  fontSize: '1rem'
+                }} />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  disabled={loading}
+                  style={{ paddingLeft: '3rem' }}
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <div style={{ position: 'relative' }}>
+                <FaLock style={{
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#FB6376',
+                  fontSize: '1rem'
+                }} />
+                <input
+                  type="password"
+                  placeholder="Mật khẩu"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  disabled={loading}
+                  style={{ paddingLeft: '3rem' }}
+                />
+              </div>
+            </div>
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Đang xử lý...' : (
+                <>
+                  <FaSignInAlt style={{ marginRight: '0.5rem' }} />
+                  Đăng nhập
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="login-divider">
+            <span>Hoặc</span>
+          </div>
+
+          <div className="google-login-wrapper">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Đăng nhập Google thất bại')}
               disabled={loading}
             />
           </div>
-          <div className="form-group">
-            <input
-              type="password"
-              placeholder="Mật khẩu"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              disabled={loading}
-            />
-          </div>
-          <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
-          </button>
-        </form>
 
-        <div className="login-divider">
-          <span>Hoặc</span>
+          <p className="login-footer">
+            Bạn chưa có tài khoản?{' '}
+            <Link to="/register" className="login-link">
+              Đăng ký ngay
+            </Link>
+          </p>
         </div>
-
-        <div className="google-login-wrapper">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError('Đăng nhập Google thất bại')}
-            disabled={loading}
-          />
-        </div>
-
-        <p className="login-footer">
-          Bạn chưa có tài khoản?{' '}
-          <Link to="/register" className="login-link">
-            Đăng ký ngay
-          </Link>
-        </p>
       </div>
+      <Footer />
     </div>
   );
 }

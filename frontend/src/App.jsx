@@ -32,8 +32,15 @@ import AdminEditProduct from './components/admin/pages/AdminEditProduct';
 import AdminReview from './components/admin/pages/AdminReview';
 import AdminOrder from './components/admin/pages/AdminOrders';
 import ProductList from './components/frontend/pages/ProductList';
+import ProductDetail from './components/frontend/pages/ProductDetail';
 import Cart from './components/frontend/pages/Cart';
+import Checkout from './components/frontend/pages/Checkout';
 import Profile from './components/frontend/pages/Profile';
+import Anniversaries from './components/frontend/pages/Anniversaries';
+import Preferences from './components/frontend/pages/Preferences';
+import AddAddress from './components/frontend/pages/AddAddress';
+import Orders from './components/frontend/pages/Orders';
+import OrderDetail from './components/frontend/pages/OrderDetail';
 import AdminPromotions from './components/admin/pages/AdminPromotions';
 import AdminEditPromotion from './components/admin/pages/AdminEditPromotion';
 import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
@@ -53,8 +60,15 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/products" element={<ProductList />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/anniversaries" element={<Anniversaries />} />
+          <Route path="/preferences" element={<Preferences />} />
+          <Route path="/add-address" element={<AddAddress />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
           {/* Admin */}
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route

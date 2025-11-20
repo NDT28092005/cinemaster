@@ -43,7 +43,7 @@ class OrderController extends Controller
 }
     public function index(Request $request)
     {
-        $orders = Order::with(['user', 'items.product'])
+        $orders = Order::with(['user', 'items.product.images'])
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->latest()
             ->paginate(10);
@@ -151,6 +151,17 @@ class OrderController extends Controller
         ]);
     }
 
+
+    /**
+     * 🔍 Xem chi tiết đơn hàng
+     */
+    public function show($id)
+    {
+        $order = Order::with(['user', 'items.product.images', 'payment'])
+            ->findOrFail($id);
+        
+        return response()->json($order);
+    }
 
     /**
      * ❌ Hủy các đơn quá hạn (tự động)

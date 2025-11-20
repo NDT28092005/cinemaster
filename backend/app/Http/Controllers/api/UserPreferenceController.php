@@ -20,8 +20,8 @@ class UserPreferenceController extends Controller
         $validated = $request->validate([
             'preferred_occasion' => 'nullable|string|max:100',
             'favorite_category' => 'nullable|string|max:100',
-            'budget_range_min' => 'nullable|numeric|min:0',
-            'budget_range_max' => 'nullable|numeric|min:0',
+            'budget_range_min' => 'nullable|numeric|min:0|max:999999999999999',
+            'budget_range_max' => 'nullable|numeric|min:0|max:999999999999999',
         ]);
 
         $validated['user_id'] = $user_id;
@@ -45,8 +45,8 @@ class UserPreferenceController extends Controller
         $validated = $request->validate([
             'preferred_occasion' => 'nullable|string|max:100',
             'favorite_category' => 'nullable|string|max:100',
-            'budget_range_min' => 'nullable|numeric|min:0',
-            'budget_range_max' => 'nullable|numeric|min:0',
+            'budget_range_min' => 'nullable|numeric|min:0|max:999999999999999',
+            'budget_range_max' => 'nullable|numeric|min:0|max:999999999999999',
         ]);
 
         $preference->update($validated);
