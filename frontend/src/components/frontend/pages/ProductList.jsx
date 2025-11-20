@@ -27,6 +27,7 @@ export default function ProductList() {
   const [selectedOccasion, setSelectedOccasion] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [addingProductId, setAddingProductId] = useState(null);
   const { token, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,7 +139,11 @@ export default function ProductList() {
     if (authLoading) {
       return;
     }
-    
+
+    if (addingProductId === productId) {
+      return;
+    }
+
     const tokenFromContext = token;
     let tokenFromStorage = localStorage.getItem('token');
     
@@ -155,6 +160,7 @@ export default function ProductList() {
     }
 
     try {
+      setAddingProductId(productId);
       await axios.post(
         "http://localhost:8000/api/cart/add",
         { product_id: productId, quantity: 1 },
@@ -164,6 +170,8 @@ export default function ProductList() {
     } catch (err) {
       console.error("Add to cart error:", err);
       alert("❌ Lỗi khi thêm vào giỏ hàng: " + (err.response?.data?.message || err.message));
+    } finally {
+      setAddingProductId((current) => (current === productId ? null : current));
     }
   };
 
@@ -566,7 +574,7 @@ export default function ProductList() {
                       e.stopPropagation();
                       addToCart(p.id);
                     }}
-                    disabled={p.stock_quantity === 0}
+                    disabled={p.stock_quantity === 0 || addingProductId === p.id}
                     style={{
                       width: '100%',
                       borderRadius: '30px',
@@ -580,7 +588,11 @@ export default function ProductList() {
                     }}
                   >
                     <FaShoppingCart />
-                    {p.stock_quantity === 0 ? 'Hết hàng' : 'Thêm vào giỏ'}
+                    {p.stock_quantity === 0
+                      ? 'Hết hàng'
+                      : addingProductId === p.id
+                        ? 'Đang thêm...'
+                        : 'Thêm vào giỏ'}
                   </Button>
                 </Card.Body>
               </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "../../../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -34,9 +34,14 @@ export default function Cart() {
   }, []);
 
   // Lấy giỏ hàng
-  const fetchCart = () => {
+  const getCurrentToken = useCallback(
+    () => token || localStorage.getItem("token"),
+    [token]
+  );
+
+  const fetchCart = useCallback(() => {
     if (authLoading) return;
-    const currentToken = token || localStorage.getItem("token");
+    const currentToken = getCurrentToken();
     if (!currentToken) {
       navigate("/login", { state: { from: location.pathname } });
       return;
@@ -57,125 +62,104 @@ export default function Cart() {
         setError(err.response?.data?.message || "Lỗi khi tải giỏ hàng");
         setLoading(false);
       });
-  };
+  }, [authLoading, navigate, location.pathname, getCurrentToken]);
 
   useEffect(() => {
     fetchCart();
-  }, [token, authLoading, navigate, location]);
+  }, [fetchCart]);
 
   // Cập nhật số lượng sản phẩm
-  const updateQuantity = async (itemId, productId, newQuantity) => {
-    if (newQuantity < 1) {
-      removeItem(itemId, productId);
+  // const updateQuantity = async (itemId, productId, newQuantity) => {
+  //   if (newQuantity < 1) {
+  //     removeItem(itemId, productId);
+  //     return;
+  //   }
+
+  //   const currentToken = token || localStorage.getItem("token");
+  //   if (!currentToken) {
+  //     alert("Vui lòng đăng nhập");
+  //     navigate("/login");
+  //     return;
+  //   }
+
+  //   try {
+  //     const currentItem = cart.items.find(item => item.id === itemId);
+  //     const currentQuantity = currentItem?.quantity || 0;
+  //     const quantityDiff = newQuantity - currentQuantity;
+
+  //     if (quantityDiff === 0) return;
+
+  //     await axios.post(
+  //       "http://localhost:8000/api/cart/add",
+  //       { product_id: productId, quantity: quantityDiff },
+  //       { headers: { Authorization: `Bearer ${currentToken}` } }
+  //     );
+
+  //     fetchCart();
+  //   } catch (err) {
+  //     console.error("Update quantity error:", err);
+  //     alert("❌ Lỗi khi cập nhật số lượng: " + (err.response?.data?.message || err.message));
+  //   }
+  // };
+  const updateQuantity = async (cartId, newQty) => {
+    if (newQty < 1) {
+      removeItem(cartId);
       return;
     }
 
-    const currentToken = token || localStorage.getItem("token");
+    const currentToken = getCurrentToken();
     if (!currentToken) {
-      alert("Vui lòng đăng nhập");
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
     try {
-      const currentItem = cart.items.find(item => item.id === itemId);
-      const currentQuantity = currentItem?.quantity || 0;
-      const quantityDiff = newQuantity - currentQuantity;
-
-      if (quantityDiff === 0) return;
-
-      await axios.post(
-        "http://localhost:8000/api/cart/add",
-        { product_id: productId, quantity: quantityDiff },
-        { headers: { Authorization: `Bearer ${currentToken}` } }
+      const res = await axios.put(
+        "http://localhost:8000/api/cart/update",
+        {
+          cart_id: cartId,
+          quantity: newQty,
+        },
+        {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        }
       );
-      
-      fetchCart();
+      setCart({
+        items: res.data.items || [],
+        total_amount: res.data.total_amount || 0,
+      });
+      setError(null);
     } catch (err) {
       console.error("Update quantity error:", err);
-      alert("❌ Lỗi khi cập nhật số lượng: " + (err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || "Không thể cập nhật số lượng");
     }
   };
-  const updateQuantity = (cartId, newQty) => {
-    const currentToken = token || localStorage.getItem("token");
 
-    axios.put("http://localhost:8000/api/cart/update", {
-      cart_id: cartId,
-      quantity: newQty
-    }, {
-      headers: { Authorization: `Bearer ${currentToken}` }
-    })
-      .then(res => {
-        setCart(res.data);
-      })
-      .catch(err => console.error(err));
-  };
-
-  const removeFromCart = (cartId) => {
-    const currentToken = token || localStorage.getItem("token");
-
-    axios.delete("http://localhost:8000/api/cart/remove", {
-      headers: { Authorization: `Bearer ${currentToken}` },
-      data: { cart_id: cartId }
-    })
-      .then(res => {
-        setCart(res.data);
-      })
-      .catch(err => console.error(err));
-  };
-  // Poll Google Sheet
-  const checkPaymentFromGoogleAPI = async () => {
-    try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbyjHTm8gtq_qPG_GUEV970kCuAFuhGd3dlEqqPjK-zsvUssBzdeOuc0si8BjVx31nj9/exec"
-      );
-      const data = await response.json();
-      if (!data?.data?.length) return;
-
-    const currentToken = token || localStorage.getItem("token");
+  const removeItem = async (cartId) => {
+    const currentToken = getCurrentToken();
     if (!currentToken) {
-      alert("Vui lòng đăng nhập");
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
     try {
-      const currentItem = cart.items.find(item => item.id === itemId);
-      const currentQuantity = currentItem?.quantity || 1;
-
-      await axios.post(
-        "http://localhost:8000/api/cart/add",
-        { product_id: productId, quantity: -currentQuantity },
-        { headers: { Authorization: `Bearer ${currentToken}` } }
-      );
-      
-      fetchCart();
+      const res = await axios.delete("http://localhost:8000/api/cart/remove", {
+        headers: { Authorization: `Bearer ${currentToken}` },
+        data: { cart_id: cartId },
+      });
+      setCart({
+        items: res.data.items || [],
+        total_amount: res.data.total_amount || 0,
+      });
+      setError(null);
     } catch (err) {
       console.error("Remove item error:", err);
-      try {
-        const otherItems = cart.items.filter(item => item.id !== itemId);
-        await axios.delete("http://localhost:8000/api/cart/clear-cart", {
-          headers: { Authorization: `Bearer ${currentToken}` }
-        });
-        
-        for (const item of otherItems) {
-          await axios.post(
-            "http://localhost:8000/api/cart/add",
-            { product_id: item.product_id || item.product?.id, quantity: item.quantity },
-            { headers: { Authorization: `Bearer ${currentToken}` } }
-          );
-        }
-        
-        fetchCart();
-      } catch (fallbackErr) {
-        console.error("Fallback remove error:", fallbackErr);
-        alert("❌ Lỗi khi xóa sản phẩm: " + (fallbackErr.response?.data?.message || fallbackErr.message));
-      }
+      setError(err.response?.data?.message || "Không thể xóa sản phẩm khỏi giỏ");
     }
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
+    return new Intl.NumberFormat("vi-VN").format(price) + " đ";
   };
 
   const handleCheckout = () => {
@@ -245,39 +229,49 @@ export default function Cart() {
                 {cart?.items?.length > 0 ? (
                   <div className="cart-items-list">
                     {cart.items.map((item, index) => (
-                      <div 
-                        key={item.id} 
+                      <div
+                        key={item.id}
                         className="cart-item"
                         style={{
-                          animation: `fadeInUp 0.5s ease-out ${0.1 * index}s both`
+                          animation: `fadeInUp 0.5s ease-out ${0.1 * index}s both`,
                         }}
                       >
                         <div className="cart-item-content">
-                          <div 
+                          <div
                             className="cart-item-image"
-                            onClick={() => navigate(`/products/${item.product_id || item.product?.id}`)}
+                            onClick={() =>
+                              navigate(`/products/${item.product_id || item.product?.id}`)
+                            }
                           >
                             <img
-                              src={item.product?.images?.[0]?.image_url || item.product?.image_url || 'https://via.placeholder.com/100'}
-                              alt={item.product?.name || 'Sản phẩm'}
+                              src={
+                                item.product?.images?.[0]?.image_url ||
+                                item.product?.image_url ||
+                                "https://via.placeholder.com/100"
+                              }
+                              alt={item.product?.name || "Sản phẩm"}
                             />
                           </div>
-                          
+
                           <div className="cart-item-info">
-                            <h5 
+                            <h5
                               className="cart-item-name"
-                              onClick={() => navigate(`/products/${item.product_id || item.product?.id}`)}
+                              onClick={() =>
+                                navigate(`/products/${item.product_id || item.product?.id}`)
+                              }
                             >
                               {item.product?.name || "Unknown Product"}
                             </h5>
-                            
+
                             <div className="cart-item-controls">
                               <div className="quantity-controls">
                                 <span className="quantity-label">Số lượng:</span>
                                 <div className="quantity-buttons">
                                   <button
                                     className="quantity-btn"
-                                    onClick={() => updateQuantity(item.id, item.product_id || item.product?.id, Math.max(1, item.quantity - 1))}
+                                    onClick={() =>
+                                      updateQuantity(item.id, Math.max(1, item.quantity - 1))
+                                    }
                                   >
                                     -
                                   </button>
@@ -286,7 +280,10 @@ export default function Cart() {
                                     className="quantity-btn"
                                     onClick={() => {
                                       const maxStock = item.product?.stock_quantity || 999;
-                                      updateQuantity(item.id, item.product_id || item.product?.id, Math.min(maxStock, item.quantity + 1));
+                                      updateQuantity(
+                                        item.id,
+                                        Math.min(maxStock, item.quantity + 1)
+                                      );
                                     }}
                                     disabled={item.quantity >= (item.product?.stock_quantity || 999)}
                                   >
@@ -297,15 +294,19 @@ export default function Cart() {
 
                               <div className="cart-item-price">
                                 <span className="price-label">Giá:</span>
-                                <span className="price-value">{formatPrice((item.product?.price || 0) * item.quantity)}</span>
-                                <span className="price-unit">({formatPrice(item.product?.price || 0)} x {item.quantity})</span>
+                                <span className="price-value">
+                                  {formatPrice((item.product?.price || 0) * item.quantity)}
+                                </span>
+                                <span className="price-unit">
+                                  ({formatPrice(item.product?.price || 0)} x {item.quantity})
+                                </span>
                               </div>
                             </div>
                           </div>
 
                           <button
                             className="cart-item-remove"
-                            onClick={() => removeItem(item.id, item.product_id || item.product?.id)}
+                            onClick={() => removeItem(item.id)}
                             title="Xóa sản phẩm"
                           >
                             <FaTrash />
@@ -319,10 +320,7 @@ export default function Cart() {
                     <FaShoppingCart className="cart-empty-icon" />
                     <h3>Giỏ hàng trống</h3>
                     <p>Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
-                    <Button 
-                      className="btn-book" 
-                      onClick={() => navigate('/products')}
-                    >
+                    <Button className="btn-book" onClick={() => navigate("/products")}>
                       Mua sắm ngay
                     </Button>
                   </div>
@@ -335,7 +333,7 @@ export default function Cart() {
             <Card className="cart-summary-card">
               <Card.Body>
                 <h2 className="cart-summary-title">Tổng đơn hàng</h2>
-                
+
                 <div className="cart-summary-details">
                   <div className="summary-row">
                     <span>Tạm tính:</span>
@@ -360,7 +358,7 @@ export default function Cart() {
                     onClick={handleCheckout}
                     disabled={!cart?.items?.length}
                   >
-                    Thanh toán <FaArrowRight style={{ marginLeft: '0.5rem' }} />
+                    Thanh toán <FaArrowRight style={{ marginLeft: "0.5rem" }} />
                   </Button>
                 )}
               </Card.Body>

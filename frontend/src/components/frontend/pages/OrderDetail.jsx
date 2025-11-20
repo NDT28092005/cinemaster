@@ -40,6 +40,7 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   // SEO Meta Tags
   useEffect(() => {
@@ -189,6 +190,36 @@ export default function OrderDetail() {
 
   const statusInfo = getStatusInfo(order.status);
   const StatusIcon = statusInfo.icon;
+  const canCancel = ['pending', 'paid', 'processing'].includes(order.status);
+
+  const handleCancelOrder = async () => {
+    if (!token || !order) return;
+
+    const confirmCancel = window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');
+    if (!confirmCancel) {
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      const response = await axios.post(
+        `http://localhost:8000/api/orders/${order.id}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data?.order) {
+        setOrder(response.data.order);
+      }
+
+      alert(response.data?.message || 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.');
+    } catch (err) {
+      console.error('Cancel order error:', err);
+      alert(err.response?.data?.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <div className="order-detail-page">
@@ -218,18 +249,34 @@ export default function OrderDetail() {
           }}>
             Đơn hàng #{order.id}
           </h1>
-          <div className="order-status-badge">
-            <StatusIcon style={{ color: statusInfo.color, marginRight: '0.5rem' }} />
-            <Badge 
-              style={{ 
-                backgroundColor: statusInfo.color,
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem',
-                fontWeight: 600
-              }}
-            >
-              {statusInfo.label}
-            </Badge>
+          <div className="order-status-actions">
+            <div className="order-status-badge">
+              <StatusIcon style={{ color: statusInfo.color, marginRight: '0.5rem' }} />
+              <Badge 
+                style={{ 
+                  backgroundColor: statusInfo.color,
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 600
+                }}
+              >
+                {statusInfo.label}
+              </Badge>
+            </div>
+            {canCancel && (
+              <Button
+                variant="outline-danger"
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+                style={{
+                  borderRadius: '8px',
+                  padding: '0.5rem 1.25rem',
+                  fontWeight: 600
+                }}
+              >
+                {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -339,6 +386,12 @@ export default function OrderDetail() {
                     <span>{formatPrice((Number(order.total_amount) || 0) + (Number(order.shipping_fee) || 0))}</span>
                   </div>
                 </div>
+
+                {order.status === 'cancelled' && (
+                  <div className="order-cancel-note">
+                    Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.
+                  </div>
+                )}
               </Card.Body>
             </Card>
           </Col>

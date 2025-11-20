@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -37,6 +37,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [activeStage, setActiveStage] = useState('all');
   const [error, setError] = useState('');
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
 
   // SEO Meta Tags
   useEffect(() => {
@@ -61,55 +62,75 @@ export default function Orders() {
   }, [user, authLoading, navigate]);
 
   // Fetch all orders để đếm số lượng và filter
-  useEffect(() => {
+  const fetchOrders = useCallback(async () => {
     if (!user || !token) return;
 
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        
-        const response = await axios.get('http://localhost:8000/api/orders', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { per_page: 100 } // Lấy nhiều orders để đếm chính xác
-        });
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await axios.get('http://localhost:8000/api/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { per_page: 100 }
+      });
 
-        // Handle paginated response
-        let ordersData = [];
-        if (response.data.data && Array.isArray(response.data.data)) {
-          // Paginated response
-          ordersData = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          // Direct array response
-          ordersData = response.data;
-        }
-
-        // Filter orders by current user
-        const userOrders = ordersData.filter(order => {
-          const orderUserId = order.user_id || order.user?.id;
-          return orderUserId === user.id;
-        });
-        
-        setAllOrders(userOrders);
-        
-        // Filter theo activeStage
-        const filtered = activeStage === 'all' 
-          ? userOrders 
-          : userOrders.filter(o => o.status === activeStage);
-        
-        setOrders(filtered);
-      } catch (err) {
-        console.error('Error fetching orders:', err);
-        setError('Không thể tải danh sách đơn hàng. Vui lòng thử lại.');
-        setOrders([]);
-        setAllOrders([]);
-      } finally {
-        setLoading(false);
+      let ordersData = [];
+      if (response.data.data && Array.isArray(response.data.data)) {
+        ordersData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        ordersData = response.data;
       }
-    };
 
-    fetchOrders();
+      const userOrders = ordersData.filter(order => {
+        const orderUserId = order.user_id || order.user?.id;
+        return orderUserId === user.id;
+      });
+      
+      setAllOrders(userOrders);
+
+      const filtered = activeStage === 'all' 
+        ? userOrders 
+        : userOrders.filter(o => o.status === activeStage);
+      
+      setOrders(filtered);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError('Không thể tải danh sách đơn hàng. Vui lòng thử lại.');
+      setOrders([]);
+      setAllOrders([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user, token, activeStage]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const handleCancelOrder = async (orderId) => {
+    if (!token || !user) return;
+
+    const confirm = window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');
+    if (!confirm) {
+      return;
+    }
+
+    try {
+      setCancellingOrderId(orderId);
+      await axios.post(
+        `http://localhost:8000/api/orders/${orderId}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.');
+      await fetchOrders();
+    } catch (err) {
+      console.error('Cancel order error:', err);
+      alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -326,7 +347,7 @@ export default function Orders() {
                           {formatPrice((Number(order.total_amount) || 0) + (Number(order.shipping_fee) || 0))}
                         </span>
                       </div>
-                      <div className="order-actions">
+                      <div className="order-actions" style={{ gap: '0.5rem', display: 'flex', flexWrap: 'wrap' }}>
                         <Button
                           variant="outline-primary"
                           size="sm"
@@ -341,12 +362,35 @@ export default function Orders() {
                         >
                           <FaEye /> Xem chi tiết
                         </Button>
+                        {['pending', 'paid', 'processing'].includes(order.status) && (
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleCancelOrder(order.id)}
+                            disabled={cancellingOrderId === order.id}
+                            style={{
+                              borderRadius: '8px',
+                              padding: '0.5rem 1.5rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            {cancellingOrderId === order.id ? 'Đang hủy...' : 'Hủy đơn'}
+                          </Button>
+                        )}
                       </div>
                     </div>
 
                     {order.delivery_address && (
                       <div className="order-address">
                         <strong>Địa chỉ giao hàng:</strong> {order.delivery_address}
+                      </div>
+                    )}
+
+                    {order.status === 'cancelled' && (
+                      <div className="order-cancel-note">
+                        Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.
                       </div>
                     )}
                   </Card.Body>

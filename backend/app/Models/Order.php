@@ -12,6 +12,7 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'total_amount',
+        'shipping_fee',
         'status',
         'delivery_address',
         'expires_at',
@@ -19,7 +20,14 @@ class Order extends Model
         'customer_phone',
         'customer_province',
         'customer_district',
-        'customer_ward'
+        'customer_ward',
+        'cancelled_at',
+        'cancellation_reason'
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     public function user()

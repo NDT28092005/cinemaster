@@ -195,7 +195,7 @@ const Header = () => {
                         <Navbar.Collapse className="site-header__right">
                             <div className="site-header__utilities ms-auto">
                                 {/* Search - Design đẹp hơn */}
-                                <Form inline className="site-header__search" onSubmit={handleSearch}>
+                                <Form className="site-header__search d-inline-flex" onSubmit={handleSearch}>
                                     <div className="input-group site-header__search-container" style={{
                                         position: 'relative',
                                         display: 'flex',

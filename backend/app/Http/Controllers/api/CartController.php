@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
+use Illuminate\Database\QueryException;
 
 class CartController extends Controller
 {
@@ -20,10 +21,7 @@ class CartController extends Controller
         $user = $request->user();
         if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
 
-        $items = Cart::with('product')->where('user_id', $user->id)->get();
-        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
-
-        return response()->json(['items' => $items, 'total_amount' => $total]);
+        return response()->json($this->buildCartSnapshot($user->id));
     }
 
     /**
@@ -37,55 +35,95 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity'   => 'required|integer' // Bỏ min:1 để cho phép số âm
+            'quantity'   => 'required|integer'
         ]);
 
-        // Tìm cart item hiện tại
-        $cartItem = Cart::where('user_id', $user->id)
-            ->where('product_id', $validated['product_id'])
-            ->first();
+        $quantityDelta = (int) $validated['quantity'];
+        $status = null;
 
-        if ($cartItem) {
-            // Cập nhật số lượng
-            $newQuantity = $cartItem->quantity + $validated['quantity'];
-            
-            if ($newQuantity <= 0) {
-                // Nếu số lượng <= 0, xóa item khỏi giỏ hàng
-                $cartItem->delete();
-                return response()->json([
-                    'message' => 'Sản phẩm đã được xóa khỏi giỏ hàng',
-                    'cart_item' => null
-                ]);
-            } else {
-                // Cập nhật số lượng mới
-                $cartItem->quantity = $newQuantity;
-                $cartItem->save();
-                
-                return response()->json([
-                    'message' => 'Cập nhật số lượng thành công',
-                    'cart_item' => $cartItem->fresh('product')
-                ]);
-            }
-        } else {
-            // Nếu chưa có trong giỏ hàng và quantity > 0, tạo mới
-            if ($validated['quantity'] > 0) {
-                $cartItem = Cart::create([
+        try {
+            DB::transaction(function () use ($user, $validated, $quantityDelta, &$status) {
+                $cartItem = Cart::where('user_id', $user->id)
+                    ->where('product_id', $validated['product_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($cartItem) {
+                    $newQuantity = $cartItem->quantity + $quantityDelta;
+
+                    if ($newQuantity <= 0) {
+                        $cartItem->delete();
+                        $status = 'removed';
+                        return;
+                    }
+
+                    $cartItem->update(['quantity' => $newQuantity]);
+                    $status = 'updated';
+                    return;
+                }
+
+                if ($quantityDelta <= 0) {
+                    $status = 'invalid';
+                    return;
+                }
+
+                $status = 'added';
+
+                Cart::create([
                     'user_id' => $user->id,
                     'product_id' => $validated['product_id'],
-                    'quantity' => $validated['quantity']
+                    'quantity' => $quantityDelta
                 ]);
+            });
+        } catch (QueryException $exception) {
+            if ($exception->getCode() !== '23000') {
+                throw $exception;
+            }
 
-                return response()->json([
-                    'message' => 'Thêm sản phẩm vào giỏ hàng thành công',
-                    'cart_item' => $cartItem->fresh('product')
-                ]);
+            $cartItem = Cart::where('user_id', $user->id)
+                ->where('product_id', $validated['product_id'])
+                ->first();
+
+            if ($cartItem) {
+                $newQuantity = $cartItem->quantity + $quantityDelta;
+
+                if ($newQuantity <= 0) {
+                    $cartItem->delete();
+                    $status = 'removed';
+                    $cartItem = null;
+                } else {
+                    $cartItem->update(['quantity' => $newQuantity]);
+                    $status = 'updated';
+                }
             } else {
-                // Nếu quantity <= 0 và chưa có item, trả về lỗi
-                return response()->json([
-                    'message' => 'Không thể giảm số lượng sản phẩm chưa có trong giỏ hàng'
-                ], 400);
+                throw $exception;
             }
         }
+
+        if ($status === 'invalid') {
+            return response()->json([
+                'message' => 'Không thể giảm số lượng sản phẩm chưa có trong giỏ hàng'
+            ], 400);
+        }
+
+        $cartSnapshot = $this->buildCartSnapshot($user->id);
+
+        switch ($status) {
+            case 'removed':
+                $message = 'Sản phẩm đã được xóa khỏi giỏ hàng';
+                break;
+            case 'updated':
+                $message = 'Cập nhật số lượng thành công';
+                break;
+            default:
+                $message = 'Thêm sản phẩm vào giỏ hàng thành công';
+        }
+
+        return response()->json([
+            'message' => $message,
+            'items' => $cartSnapshot['items'],
+            'total_amount' => $cartSnapshot['total_amount'],
+        ]);
     }
 
 
@@ -234,14 +272,12 @@ class CartController extends Controller
 
         $cartItem->update(['quantity' => $validated['quantity']]);
 
-        // Recalculate total
-        $items = Cart::with('product')->where('user_id', $user->id)->get();
-        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
+        $cartSnapshot = $this->buildCartSnapshot($user->id);
 
         return response()->json([
             'message' => 'Cart updated',
-            'items' => $items,
-            'total_amount' => $total
+            'items' => $cartSnapshot['items'],
+            'total_amount' => $cartSnapshot['total_amount']
         ]);
     }
     public function removeItem(Request $request)
@@ -257,14 +293,23 @@ class CartController extends Controller
             ->where('user_id', $user->id)
             ->delete();
 
-        // Recalculate total
-        $items = Cart::with('product')->where('user_id', $user->id)->get();
-        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
+        $cartSnapshot = $this->buildCartSnapshot($user->id);
 
         return response()->json([
             'message' => 'Item removed',
-            'items' => $items,
-            'total_amount' => $total
+            'items' => $cartSnapshot['items'],
+            'total_amount' => $cartSnapshot['total_amount']
         ]);
+    }
+
+    private function buildCartSnapshot(int $userId): array
+    {
+        $items = Cart::with('product')->where('user_id', $userId)->get();
+        $total = $items->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
+
+        return [
+            'items' => $items,
+            'total_amount' => $total,
+        ];
     }
 }

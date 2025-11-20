@@ -65,6 +65,7 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [reviewSort, setReviewSort] = useState('latest');
+  const [addingToCart, setAddingToCart] = useState(false);
 
   // SEO Meta Tags
   useEffect(() => {
@@ -162,10 +163,10 @@ export default function ProductDetail() {
   }, [id]);
 
   const addToCart = async () => {
-    if (authLoading) {
+    if (authLoading || addingToCart) {
       return;
     }
-    
+
     const tokenFromContext = token;
     let tokenFromStorage = localStorage.getItem('token');
     
@@ -182,6 +183,7 @@ export default function ProductDetail() {
     }
 
     try {
+      setAddingToCart(true);
       await axios.post(
         "http://localhost:8000/api/cart/add",
         { product_id: id, quantity: quantity },
@@ -192,6 +194,8 @@ export default function ProductDetail() {
       console.error("Add to cart error:", err);
       const errorMsg = (err.response && err.response.data && err.response.data.message) || err.message || "Lỗi khi thêm vào giỏ hàng";
       alert("❌ " + errorMsg);
+    } finally {
+      setAddingToCart(false);
     }
   };
 
@@ -723,6 +727,7 @@ export default function ProductDetail() {
               {/* Add to Cart Button */}
               <Button
                 onClick={addToCart}
+                disabled={addingToCart}
                 style={{
                   background: '#5D2A42',
                   border: 'none',
@@ -747,7 +752,7 @@ export default function ProductDetail() {
                 }}
               >
                 <FaShoppingCart style={{ marginRight: '0.5rem' }} />
-                Add to Cart
+                {addingToCart ? 'Đang thêm...' : 'Add to Cart'}
               </Button>
             </Card>
           </Col>

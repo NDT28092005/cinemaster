@@ -174,4 +174,44 @@ class OrderController extends Controller
 
         return response()->json(['message' => "Đã hủy $count đơn hàng quá hạn"]);
     }
+
+    /**
+     * 🧨 Khách hàng chủ động hủy đơn
+     */
+    public function cancel(Request $request, $orderId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $order = Order::with(['items.product.images'])
+            ->where('id', $orderId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Không tìm thấy đơn hàng'], 404);
+        }
+
+        $allowedStatuses = ['pending', 'paid', 'processing'];
+        if (!in_array($order->status, $allowedStatuses, true)) {
+            return response()->json([
+                'message' => 'Đơn hàng không thể hủy ở trạng thái hiện tại'
+            ], 400);
+        }
+
+        $order->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancellation_reason' => $request->input('reason', 'customer_cancelled'),
+        ]);
+
+        $order->load(['items.product.images', 'payment']);
+
+        return response()->json([
+            'message' => 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.',
+            'order' => $order
+        ]);
+    }
 }
