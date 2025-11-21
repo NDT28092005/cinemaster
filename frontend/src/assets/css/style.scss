@@ -1391,6 +1391,15 @@ p {
     flex: 1;
     padding: 1rem 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    
+    // Ẩn scrollbar nhưng vẫn cho phép scroll
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE and Edge
+    
+    &::-webkit-scrollbar {
+        display: none; // Chrome, Safari, Opera
+    }
     
     &-item {
         display: flex;
@@ -1440,10 +1449,15 @@ p {
 .logout-btn {
     width: 100%;
     margin-top: auto;
+    background: rgba(220, 53, 69, 0.15);
+    color: #ff6b6b;
+    border-left: 3px solid transparent;
     
     &:hover {
-        background: rgba(251, 99, 118, 0.2);
-        color: $color-coral;
+        background: rgba(220, 53, 69, 0.25);
+        color: #ff5252;
+        border-left-color: #ff5252;
+        transform: translateX(5px);
     }
 }
 
@@ -1530,6 +1544,15 @@ p {
     flex: 1;
     padding: 2rem;
     overflow-y: auto;
+    overflow-x: hidden;
+    
+    // Ẩn scrollbar nhưng vẫn cho phép scroll
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE and Edge
+    
+    &::-webkit-scrollbar {
+        display: none; // Chrome, Safari, Opera
+    }
 }
 
 // Admin Cards

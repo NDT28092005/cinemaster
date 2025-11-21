@@ -3,59 +3,21 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { getProducts } from '../../api/product';
+import { getCategories } from '../../api/category';
 import PosterSlider from './PosterSlider';
 import HeroSlider from './HeroSlider';
 
-const GIFT_STYLES = [
-    {
-        id: 'birthday',
-        title: 'Sinh nhật',
-        description: 'Bùng nổ niềm vui cho ngày tuổi mới',
-        image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=600&q=80'
-    },
-    {
-        id: 'anniversary',
-        title: 'Kỷ niệm',
-        description: 'Giữ trọn khoảnh khắc hai người',
-        image: 'https://images.unsplash.com/photo-1458682625221-3a45f8a844c7?auto=format&fit=crop&w=600&q=80'
-    },
-    {
-        id: 'corporate',
-        title: 'Doanh nghiệp',
-        description: 'Tinh tế dành cho đối tác quan trọng',
-        image: 'https://images.unsplash.com/photo-1508233661973-36e2ae67bc3f?auto=format&fit=crop&w=600&q=80'
-    },
-    {
-        id: 'holiday',
-        title: 'Ngày lễ',
-        description: 'Trang trí ngọt ngào cho mùa lễ hội',
-        image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80'
-    }
+// Fallback images cho categories
+const CATEGORY_FALLBACK_IMAGES = [
+    'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1458682625221-3a45f8a844c7?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1508233661973-36e2ae67bc3f?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=600&q=80'
 ];
 
-const TESTIMONIALS = [
-    {
-        id: 1,
-        name: 'Ngọc Anh',
-        role: 'Content Creator',
-        rating: 5,
-        content: 'Mình cực kỳ ấn tượng với chất liệu và cách đóng gói sản phẩm. Đặt hàng từ Shop.co chưa bao giờ khiến mình thất vọng.'
-    },
-    {
-        id: 2,
-        name: 'Minh Tuấn',
-        role: 'Photographer',
-        rating: 5,
-        content: 'Giao hàng nhanh, sản phẩm đúng như mô tả. Bộ sưu tập mới luôn được cập nhật liên tục nên rất dễ để bắt kịp xu hướng.'
-    },
-    {
-        id: 3,
-        name: 'Bích Trâm',
-        role: 'Brand Executive',
-        rating: 4,
-        content: 'Thiết kế tinh tế, màu sắc trendy. Dịch vụ chăm sóc khách hàng thân thiện và hỗ trợ đổi size rất nhanh chóng.'
-    }
-];
+// Testimonials sẽ được load từ reviews thực tế
 
 const BRAND_STRIP = ['Birthday', 'Anniversary', 'Corporate', 'Holiday', 'Handmade'];
 
@@ -108,6 +70,11 @@ const Content = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const [categoryImages, setCategoryImages] = useState({});
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
     const navigate = useNavigate();
     const location = useLocation();
     const { token, loading: authLoading } = useContext(AuthContext);
@@ -133,6 +100,114 @@ const Content = () => {
         };
 
         fetchProducts();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    // Fetch categories và ảnh cho mỗi category
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+                const { data } = await getCategories();
+                if (!isMounted) return;
+                
+                const categoriesList = Array.isArray(data) ? data : [];
+                setCategories(categoriesList);
+
+                // Lấy ảnh cho mỗi category: ưu tiên image_url của category, nếu không có thì lấy từ sản phẩm đầu tiên
+                const imageMap = {};
+                for (const category of categoriesList) {
+                    // Ưu tiên dùng ảnh của category nếu có
+                    if (category.image_url) {
+                        imageMap[category.id] = category.image_url;
+                    } else {
+                        // Nếu không có, lấy từ sản phẩm đầu tiên
+                        try {
+                            const productsRes = await getProducts({ category_id: category.id });
+                            const categoryProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+                            if (categoryProducts.length > 0) {
+                                // Lấy sản phẩm đầu tiên
+                                const firstProduct = categoryProducts[0];
+                                if (firstProduct.image_url) {
+                                    imageMap[category.id] = firstProduct.image_url;
+                                } else if (Array.isArray(firstProduct.images) && firstProduct.images.length > 0) {
+                                    imageMap[category.id] = firstProduct.images[0].image_url || FALLBACK_IMAGE;
+                                } else {
+                                    // Dùng fallback image theo index
+                                    imageMap[category.id] = CATEGORY_FALLBACK_IMAGES[category.id % CATEGORY_FALLBACK_IMAGES.length] || FALLBACK_IMAGE;
+                                }
+                            } else {
+                                // Không có sản phẩm, dùng fallback
+                                imageMap[category.id] = CATEGORY_FALLBACK_IMAGES[category.id % CATEGORY_FALLBACK_IMAGES.length] || FALLBACK_IMAGE;
+                            }
+                        } catch (err) {
+                            console.error(`Error fetching products for category ${category.id}:`, err);
+                            imageMap[category.id] = CATEGORY_FALLBACK_IMAGES[category.id % CATEGORY_FALLBACK_IMAGES.length] || FALLBACK_IMAGE;
+                        }
+                    }
+                }
+                
+                if (!isMounted) return;
+                setCategoryImages(imageMap);
+            } catch (err) {
+                if (!isMounted) return;
+                console.error('Error fetching categories:', err);
+            } finally {
+                if (isMounted) setCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    // Fetch reviews để hiển thị testimonials
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchReviews = async () => {
+            try {
+                setReviewsLoading(true);
+                const response = await axios.get('http://localhost:8000/api/reviews/');
+                if (!isMounted) return;
+                
+                const allReviews = Array.isArray(response.data) ? response.data : [];
+                // Lọc reviews: không bị block, có comment, và có user info
+                const validReviews = allReviews
+                    .filter(review => 
+                        review && 
+                        !review.is_blocked && 
+                        review.comment && 
+                        review.comment.trim() !== '' &&
+                        review.user &&
+                        review.rating >= 4 // Chỉ lấy reviews 4-5 sao
+                    )
+                    .slice(0, 10) // Lấy tối đa 10 reviews
+                    .map(review => ({
+                        id: review.review_id || review.id,
+                        name: review.user?.name || 'Khách hàng',
+                        rating: review.rating || 5,
+                        content: review.comment
+                    }));
+                
+                if (!isMounted) return;
+                setReviews(validReviews);
+            } catch (err) {
+                if (!isMounted) return;
+                console.error('Error fetching reviews:', err);
+                setReviews([]);
+            } finally {
+                if (isMounted) setReviewsLoading(false);
+            }
+        };
+
+        fetchReviews();
         return () => {
             isMounted = false;
         };
@@ -267,21 +342,44 @@ const Content = () => {
                 </div>
             </section>
 
-            {/* Browse by Dress Style */}
+            {/* Danh mục sản phẩm */}
             <section className="gift-style">
                 <div className="container">
                     <div className="section-header">
-                        <h2 className="section-title">BROWSE BY DRESS STYLE</h2>
+                        <h2 className="section-title">DANH MỤC SẢN PHẨM</h2>
                     </div>
                     <div className="gift-style__grid">
-                        {GIFT_STYLES.map((style) => (
-                            <article className="gift-style__card" key={style.id}>
-                                <img src={style.image} alt={style.title} loading="lazy" />
-                                <div className="overlay">
-                                    <h4>{style.title}</h4>
-                                </div>
-                            </article>
-                        ))}
+                        {categoriesLoading ? (
+                            // Skeleton loading
+                            Array.from({ length: 4 }).map((_, index) => (
+                                <article className="gift-style__card skeleton" key={`skeleton-${index}`}>
+                                    <div className="shimmer" style={{ width: '100%', height: '100%', borderRadius: '12px' }} />
+                                </article>
+                            ))
+                        ) : categories.length > 0 ? (
+                            categories.map((category) => (
+                                <article 
+                                    className="gift-style__card" 
+                                    key={category.id}
+                                    onClick={() => navigate(`/products?category_id=${category.id}`)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <img 
+                                        src={categoryImages[category.id] || FALLBACK_IMAGE} 
+                                        alt={category.name} 
+                                        loading="lazy"
+                                        onError={(e) => {
+                                            e.target.src = CATEGORY_FALLBACK_IMAGES[category.id % CATEGORY_FALLBACK_IMAGES.length] || FALLBACK_IMAGE;
+                                        }}
+                                    />
+                                    <div className="overlay">
+                                        <h4>{category.name}</h4>
+                                    </div>
+                                </article>
+                            ))
+                        ) : (
+                            <div className="empty-state">Chưa có danh mục sản phẩm.</div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -292,20 +390,37 @@ const Content = () => {
                     <div className="section-header">
                         <h2 className="section-title">OUR HAPPY CUSTOMERS</h2>
                     </div>
-                    <PosterSlider
-                        items={TESTIMONIALS}
-                        renderItem={(item) => (
-                            <article className="testimonial-card">
-                                <div className="rating">
-                                    {'★'.repeat(item.rating)}
-                                </div>
-                                <p className="content">"{item.content}"</p>
-                                <div className="author">
-                                    <strong>{item.name}</strong>
-                                </div>
-                            </article>
-                        )}
-                    />
+                    {reviewsLoading ? (
+                        // Skeleton loading
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            {Array.from({ length: 3 }).map((_, index) => (
+                                <article className="testimonial-card skeleton" key={`skeleton-${index}`} style={{ minWidth: '300px' }}>
+                                    <div className="shimmer-line w-50" style={{ height: '20px', marginBottom: '1rem' }} />
+                                    <div className="shimmer-line w-100" style={{ height: '60px', marginBottom: '1rem' }} />
+                                    <div className="shimmer-line w-30" style={{ height: '16px' }} />
+                                </article>
+                            ))}
+                        </div>
+                    ) : reviews.length > 0 ? (
+                        <PosterSlider
+                            items={reviews}
+                            renderItem={(item) => (
+                                <article className="testimonial-card">
+                                    <div className="rating">
+                                        {'★'.repeat(item.rating)}
+                                    </div>
+                                    <p className="content">"{item.content}"</p>
+                                    <div className="author">
+                                        <strong>{item.name}</strong>
+                                    </div>
+                                </article>
+                            )}
+                        />
+                    ) : (
+                        <div className="empty-state" style={{ textAlign: 'center', padding: '2rem' }}>
+                            Chưa có đánh giá nào để hiển thị.
+                        </div>
+                    )}
                 </div>
             </section>
 

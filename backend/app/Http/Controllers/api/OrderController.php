@@ -201,13 +201,19 @@ class OrderController extends Controller
             ], 400);
         }
 
+        // Lấy lý do hủy từ request (hỗ trợ cả 'reason' và 'cancel_reason')
+        $cancellationReason = $request->input('reason') 
+            ?? $request->input('cancel_reason') 
+            ?? 'customer_cancelled';
+
         $order->update([
             'status' => 'cancelled',
             'cancelled_at' => now(),
-            'cancellation_reason' => $request->input('reason', 'customer_cancelled'),
+            'cancellation_reason' => $cancellationReason,
         ]);
 
-        $order->load(['items.product.images', 'payment']);
+        // Load lại order với các relationships (không load payment nếu không cần)
+        $order->load(['items.product.images']);
 
         return response()->json([
             'message' => 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.',
