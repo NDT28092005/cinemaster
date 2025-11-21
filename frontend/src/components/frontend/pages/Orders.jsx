@@ -8,6 +8,8 @@ import Container from 'react-bootstrap/Container';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
+import Modal from 'react-bootstrap/Modal';
+import Form from 'react-bootstrap/Form';
 import { 
   FaShoppingBag, 
   FaClock, 
@@ -33,13 +35,16 @@ export default function Orders() {
   const { user, token, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
-  const [allOrders, setAllOrders] = useState([]); // Lưu tất cả orders để đếm số lượng
+  const [allOrders, setAllOrders] = useState([]); // Lưu tất cả đơn hàng để đếm số lượng
   const [loading, setLoading] = useState(true);
   const [activeStage, setActiveStage] = useState('all');
   const [error, setError] = useState('');
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
 
-  // SEO Meta Tags
+  // Thẻ Meta SEO
   useEffect(() => {
     document.title = "Đơn hàng của tôi - Cửa hàng quà tặng";
     const metaDescription = document.querySelector('meta[name="description"]');
@@ -53,7 +58,7 @@ export default function Orders() {
     }
   }, []);
 
-  // Redirect nếu chưa đăng nhập
+  // Chuyển hướng nếu chưa đăng nhập
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/login');
@@ -61,7 +66,7 @@ export default function Orders() {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch all orders để đếm số lượng và filter
+  // Lấy tất cả đơn hàng để đếm số lượng và lọc
   const fetchOrders = useCallback(async () => {
     if (!user || !token) return;
 
@@ -107,29 +112,49 @@ export default function Orders() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleCancelOrder = async (orderId) => {
+  const handleCancelOrder = (orderId) => {
     if (!token || !user) return;
+    setOrderToCancel(orderId);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
 
-    const confirm = window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');
-    if (!confirm) {
+  const handleConfirmCancel = async () => {
+    if (!orderToCancel || !token || !user) return;
+
+    // Kiểm tra: lý do hủy đơn là bắt buộc
+    if (!cancelReason.trim()) {
+      alert('Vui lòng nhập lý do hủy đơn hàng.');
       return;
     }
 
     try {
-      setCancellingOrderId(orderId);
+      setCancellingOrderId(orderToCancel);
+      setShowCancelModal(false);
+      
       await axios.post(
-        `http://localhost:8000/api/orders/${orderId}/cancel`,
-        {},
+        `http://localhost:8000/api/orders/${orderToCancel}/cancel`,
+        { reason: cancelReason.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
       alert('Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.');
       await fetchOrders();
+      setCancelReason('');
+      setOrderToCancel(null);
     } catch (err) {
       console.error('Cancel order error:', err);
-      alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.';
+      alert(errorMessage);
     } finally {
       setCancellingOrderId(null);
     }
+  };
+
+  const handleCloseCancelModal = () => {
+    setShowCancelModal(false);
+    setCancelReason('');
+    setOrderToCancel(null);
   };
 
   const formatPrice = (price) => {
@@ -140,7 +165,7 @@ export default function Orders() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'Không có';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('vi-VN', {
       year: 'numeric',
@@ -181,7 +206,7 @@ export default function Orders() {
         <Header />
         <Container className="mt-5 pt-5" style={{ minHeight: '70vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">Đang tải...</span>
           </div>
         </Container>
         <Footer />
@@ -208,12 +233,12 @@ export default function Orders() {
           </h1>
         </div>
 
-        {/* Stage Tabs */}
+        {/* Tab trạng thái */}
         <div className="orders-stages">
           {ORDER_STAGES.map((stage) => {
             const Icon = stage.icon;
             const isActive = activeStage === stage.key;
-            // Đếm từ allOrders để có số lượng chính xác
+            {/* Đếm từ allOrders để có số lượng chính xác */}
             const count = stage.key === 'all' 
               ? allOrders.length 
               : allOrders.filter(o => o.status === stage.key).length;
@@ -245,12 +270,12 @@ export default function Orders() {
           })}
         </div>
 
-        {/* Orders List */}
+        {/* Danh sách đơn hàng */}
         <div className="orders-content">
           {loading ? (
             <div style={{ textAlign: 'center', padding: '3rem' }}>
               <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+                <span className="visually-hidden">Đang tải...</span>
               </div>
               <p className="mt-3" style={{ color: '#666' }}>Đang tải đơn hàng...</p>
             </div>
@@ -312,7 +337,7 @@ export default function Orders() {
                                   src={item.product.images[0].image_url} 
                                   alt={item.product.name}
                                   onError={(e) => {
-                                    e.target.src = 'https://via.placeholder.com/80x80?text=No+Image';
+                                    e.target.src = 'https://via.placeholder.com/80x80?text=Không+có+hình+ảnh';
                                   }}
                                 />
                               ) : (
@@ -401,6 +426,58 @@ export default function Orders() {
         </div>
       </Container>
       <Footer />
+
+      {/* Modal hủy đơn hàng */}
+      <Modal show={showCancelModal} onHide={handleCloseCancelModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title style={{ color: '#5D2A42', fontWeight: 600 }}>
+            Hủy đơn hàng
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p style={{ marginBottom: '1rem', color: '#666' }}>
+            Bạn có chắc chắn muốn hủy đơn hàng này? Vui lòng nhập lý do hủy đơn hàng.
+          </p>
+          <Form.Group className="mb-3">
+            <Form.Label style={{ fontWeight: 600, color: '#5D2A42' }}>
+              Lý do hủy đơn hàng <span style={{ color: '#dc3545' }}>*</span>
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              placeholder="Ví dụ: Thay đổi ý định, Đặt nhầm sản phẩm, Không còn nhu cầu..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              style={{
+                borderRadius: '8px',
+                border: '1px solid #ddd',
+                resize: 'vertical'
+              }}
+              maxLength={500}
+            />
+            <Form.Text className="text-muted" style={{ fontSize: '0.85rem' }}>
+              {cancelReason.length}/500 ký tự
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="secondary" 
+            onClick={handleCloseCancelModal}
+            style={{ borderRadius: '8px' }}
+          >
+            Hủy
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={handleConfirmCancel}
+            disabled={!cancelReason.trim() || cancellingOrderId === orderToCancel}
+            style={{ borderRadius: '8px' }}
+          >
+            {cancellingOrderId === orderToCancel ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

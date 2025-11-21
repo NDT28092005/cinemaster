@@ -8,6 +8,9 @@ class Payment extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'payment_id';
+    public $incrementing = true;
+
     protected $fillable = [
         'order_id',
         'payment_method',

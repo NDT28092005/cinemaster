@@ -145,22 +145,6 @@ const Header = () => {
                                     Tất cả sản phẩm
                                 </Nav.Link>
                                 
-                                {/* Categories từ database */}
-                                {categories.slice(0, 4).map((category) => (
-                                    <Nav.Link
-                                        key={category.id}
-                                        as={Link}
-                                        to={`/products?category_id=${category.id}`}
-                                        className="nav-link"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/products?category_id=${category.id}`);
-                                        }}
-                                    >
-                                        {category.name}
-                                    </Nav.Link>
-                                ))}
-                                
                                 {/* Occasions từ database */}
                                 {occasions.slice(0, 2).map((occasion) => (
                                     <Nav.Link
@@ -335,6 +319,28 @@ const Header = () => {
                                     <span>Giỏ hàng</span>
                                 </Nav.Link>
                                 
+                                {/* Đơn hàng của tôi - chỉ hiển thị khi đã đăng nhập */}
+                                {user && (
+                                    <Nav.Link 
+                                        as={Link}
+                                        to="/orders" 
+                                        className="site-header__login"
+                                        style={{ 
+                                            marginRight: '1rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem'
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate('/orders');
+                                        }}
+                                    >
+                                        <FaShoppingBag />
+                                        <span>Đơn hàng của tôi</span>
+                                    </Nav.Link>
+                                )}
+                                
                                 {/* Login or Profile */}
                                 <Nav>
                                     {user ? (
@@ -359,14 +365,6 @@ const Header = () => {
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <FaUser className="menu-icon" /> Hồ sơ của tôi
-                                                </Dropdown.Item>
-                                                <Dropdown.Item 
-                                                    as={Link} 
-                                                    to="/orders" 
-                                                    className="profile-menu-item" 
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <FaShoppingBag className="menu-icon" /> Đơn hàng của tôi
                                                 </Dropdown.Item>
                                                 <Dropdown.Item 
                                                     onClick={handleLogout} 
