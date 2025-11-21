@@ -11,7 +11,8 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
 import Form from 'react-bootstrap/Form';
-import { FaShoppingCart, FaStar, FaArrowLeft, FaUser } from 'react-icons/fa';
+import { FaShoppingCart, FaStar, FaArrowLeft, FaUser, FaFacebook, FaFacebookMessenger } from 'react-icons/fa';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 // Component hiển thị sao đánh giá
 const StarRating = ({ rating, onRatingChange, readonly = false, size = '1.2rem' }) => {
@@ -60,7 +61,6 @@ export default function ProductDetail() {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [relatedLoading, setRelatedLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('reviews'); // 'details', 'reviews', 'faqs'
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -111,7 +111,6 @@ export default function ProductDetail() {
 
   const fetchRelatedProducts = async (currentProduct) => {
     try {
-      setRelatedLoading(true);
       // Fetch products from same category or occasion
       const params = {};
       if (currentProduct.category_id) {
@@ -133,8 +132,6 @@ export default function ProductDetail() {
     } catch (error) {
       console.error('Fetch related products error:', error);
       setRelatedProducts([]);
-    } finally {
-      setRelatedLoading(false);
     }
   };
 
@@ -201,6 +198,32 @@ export default function ProductDetail() {
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
+  };
+
+  // Facebook Share Functions
+  const shareOnFacebook = () => {
+    const url = encodeURIComponent(window.location.href);
+    const quote = encodeURIComponent(`${product.name} - ${product.short_description || ''}`);
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${quote}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
+
+  const shareOnMessenger = () => {
+    const url = encodeURIComponent(window.location.href);
+    // Use Facebook Send Dialog for sharing via Messenger
+    const shareUrl = `https://www.facebook.com/dialog/send?link=${url}&redirect_uri=${encodeURIComponent(window.location.href)}`;
+    // For mobile devices, try to use messenger app
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      // Try to open in Messenger app first, fallback to web
+      const messengerUrl = `fb-messenger://share?link=${url}`;
+      window.location.href = messengerUrl;
+      // Fallback after a short delay if app doesn't open
+      setTimeout(() => {
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+      }, 500);
+    } else {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -754,6 +777,96 @@ export default function ProductDetail() {
                 <FaShoppingCart style={{ marginRight: '0.5rem' }} />
                 {addingToCart ? 'Đang thêm...' : 'Add to Cart'}
               </Button>
+
+              {/* Facebook Share Button */}
+              <Dropdown style={{ width: '100%' }}>
+                <Dropdown.Toggle
+                  style={{
+                    background: 'linear-gradient(135deg, #1877F2, #42A5F5)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '1rem 2rem',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: 'white',
+                    width: '100%',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #1565C0, #1976D2)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(24, 119, 242, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #1877F2, #42A5F5)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <FaFacebook style={{ fontSize: '1.2rem' }} />
+                  Chia sẻ Facebook
+                </Dropdown.Toggle>
+                <Dropdown.Menu style={{
+                  borderRadius: '8px',
+                  border: '2px solid rgba(93, 42, 66, 0.1)',
+                  boxShadow: '0 4px 15px rgba(93, 42, 66, 0.15)',
+                  padding: '0.5rem',
+                  minWidth: '200px'
+                }}>
+                  <Dropdown.Item
+                    onClick={shareOnFacebook}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      color: '#5D2A42',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(24, 119, 242, 0.1)';
+                      e.currentTarget.style.color = '#1877F2';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#5D2A42';
+                    }}
+                  >
+                    <FaFacebook style={{ fontSize: '1.1rem', color: '#1877F2' }} />
+                    <span style={{ fontWeight: 500 }}>Chia sẻ lên News Feed</span>
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={shareOnMessenger}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      color: '#5D2A42',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 132, 255, 0.1)';
+                      e.currentTarget.style.color = '#0084FF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#5D2A42';
+                    }}
+                  >
+                    <FaFacebookMessenger style={{ fontSize: '1.1rem', color: '#0084FF' }} />
+                    <span style={{ fontWeight: 500 }}>Chia sẻ qua Messenger</span>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
             </Card>
           </Col>
         </Row>
@@ -1218,7 +1331,7 @@ export default function ProductDetail() {
                 YOU MIGHT ALSO LIKE
               </h3>
               <Row className="g-4">
-                {relatedProducts.map((relatedProduct, index) => (
+                {relatedProducts.map((relatedProduct) => (
                   <Col key={relatedProduct.id} xs={12} sm={6} md={3}>
                     <Card
                       style={{
