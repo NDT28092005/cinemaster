@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Database\QueryException;
 
 class CartController extends Controller
@@ -221,8 +222,19 @@ class CartController extends Controller
         if (!$order) return response()->json(['message' => 'Không tìm thấy đơn hàng'], 404);
 
         if ($order->status === 'pending' && now()->greaterThanOrEqualTo($order->expires_at)) {
-            $order->update(['status' => 'cancelled']);
-            return response()->json(['message' => 'Đơn hàng đã bị hủy do hết thời gian thanh toán']);
+            DB::beginTransaction();
+            try {
+                // Đơn hàng pending chưa thanh toán nên không cần cộng lại tồn kho
+                $order->update(['status' => 'cancelled']);
+                DB::commit();
+                return response()->json(['message' => 'Đơn hàng đã bị hủy do hết thời gian thanh toán']);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Lỗi khi hủy đơn hàng',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
         }
 
         return response()->json(['message' => 'Đơn hàng chưa hết hạn hoặc đã được xử lý']);
@@ -246,12 +258,24 @@ class CartController extends Controller
      */
     public static function cancelExpiredOrders()
     {
-        $expiredOrders = Order::where('status', 'pending')
+        $expiredOrders = Order::with('items.product')
+            ->where('status', 'pending')
             ->where('expires_at', '<=', now())
             ->get();
 
         foreach ($expiredOrders as $order) {
-            $order->update(['status' => 'cancelled']);
+            DB::beginTransaction();
+            try {
+                // Đơn hàng pending chưa thanh toán nên không cần cộng lại tồn kho
+                $order->update(['status' => 'cancelled']);
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Error cancelling expired order', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
     }
     public function updateQuantity(Request $request)

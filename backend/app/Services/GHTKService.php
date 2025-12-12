@@ -20,12 +20,18 @@ class GHTKService
 
     public function createShipment($order)
     {
+        // ============================================
+        // 1. Tính trọng lượng
+        // ============================================
         $totalWeightGrams = $order->items->sum(function ($item) {
             return ($item->product->weight_in_gram ?? 200) * $item->quantity;
         });
 
         if ($totalWeightGrams <= 0) $totalWeightGrams = 300;
 
+        // ============================================
+        // 2. Danh sách sản phẩm
+        // ============================================
         $payload = [
             "products" => $order->items->map(function ($item) {
                 return [
@@ -37,6 +43,19 @@ class GHTKService
             })->toArray(),
         ];
 
+        // ============================================
+        // 3. Chuẩn hóa địa chỉ GHTK
+        // ============================================
+        $province = $order->customer_province;
+        $district = $order->customer_district;
+        $ward     = $order->customer_ward;
+
+        // Auto FIX lỗi đảo tỉnh ↔ huyện
+        $this->fixAddress($province, $district, $ward);
+
+        // ============================================
+        // 4. Tạo ORDER payload
+        // ============================================
         $orderPayload = [
             "id"            => "ORDER_" . $order->id,
             "weight"        => (int) $totalWeightGrams,
@@ -49,19 +68,19 @@ class GHTKService
             "tel"            => $order->customer_phone ?? "0905123456",
             "name"           => $order->customer_name ?? "Khách hàng",
             "address"        => $order->delivery_address,
-            "province"       => $order->customer_province ?? "",
-            "district"       => $order->customer_district ?? "",
-            "ward"           => $order->customer_ward ?? "",
+            "province"       => $province,
+            "district"       => $district,
+            "ward"           => $ward,
             "hamlet"         => "Khác",
             "is_freeship"    => 1,
         ];
 
-        // ✅ Nếu bạn có pick_address_id (ưu tiên)
+        // ============================================
+        // 5. Pick address
+        // ============================================
         if ($order->pick_address_id) {
             $orderPayload["pick_address_id"] = $order->pick_address_id;
-        }
-        // ❌ Nếu không có pick_address_id → phải gửi thông tin pick_xxx
-        else {
+        } else {
             $orderPayload["pick_name"]     = "Kho sách NDTiny";
             $orderPayload["pick_address"]  = "1312, Phường 1, Bình Thạnh, TP.HCM";
             $orderPayload["pick_province"] = "TP Hồ Chí Minh";
@@ -72,16 +91,26 @@ class GHTKService
 
         $payload["order"] = $orderPayload;
 
-
+        // ============================================
+        // 6. Log payload
+        // ============================================
         \Log::info("GHTK PAYLOAD FINAL => " . json_encode($payload, JSON_UNESCAPED_UNICODE));
 
+        // ============================================
+        // 7. Gửi API
+        // ============================================
         $response = Http::withHeaders([
             "Token" => $this->token,
         ])->post($this->apiUrl, $payload);
 
         $data = $response->json();
 
-        if ($response->successful() && $data["success"]) {
+        \Log::info("GHTK RESPONSE => " . json_encode($data, JSON_UNESCAPED_UNICODE));
+
+        // ============================================
+        // 8. Lưu vào database
+        // ============================================
+        if ($response->successful() && ($data["success"] ?? false)) {
             return GhtkOrder::create([
                 "order_id"     => $order->id,
                 "order_code"   => $data["order"]["order_code"] ?? null,
@@ -93,8 +122,43 @@ class GHTKService
             ]);
         }
 
-        throw new \Exception("GHTK API error: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+        // ============================================
+        // 9. Throw lỗi rõ ràng
+        // ============================================
+        throw new \Exception(
+            "GHTK API error: " . json_encode($data, JSON_UNESCAPED_UNICODE)
+        );
     }
+    private function fixAddress(&$province, &$district, &$ward)
+    {
+        // Mapping BASIC để auto sửa
+        $provinces = ["Bình Dương", "Hồ Chí Minh", "TP Hồ Chí Minh", "Hà Nội"];
+        $districts = ["Dĩ An", "Thủ Đức", "Bình Thạnh", "Quận 1", "Quận 3"];
+        $wards     = ["Đông Hoà", "Phường 1", "Linh Trung", "Hiệp Bình Chánh"];
+
+        //-- Nếu province nằm trong danh sách district => swap
+        if (in_array($province, $districts)) {
+            $tmp = $province;
+            $province = $district;
+            $district = $tmp;
+        }
+
+        //-- Nếu ward trống => cố gắng đoán
+        if (!$ward && $district === "Dĩ An") {
+            $ward = "Đông Hoà";
+        }
+
+        //-- Fix đặc thù KTX khu B
+        if (str_contains($district, "Dĩ An") && !$ward) {
+            $ward = "Đông Hoà";
+        }
+
+        //-- Nếu vẫn trống => đảm bảo không crash API
+        if (!$province) $province = "Bình Dương";
+        if (!$district) $district = "Dĩ An";
+        if (!$ward)     $ward     = "Đông Hoà";
+    }
+
     public function getOrderStatus($trackingCode)
     {
         $url = "https://services.ghtk.vn/services/shipment/v2/" . $trackingCode;
@@ -149,16 +213,16 @@ class GHTKService
 
         if ($newStatus === "cancelled" || $newStatus === "returned") {
             $order = $ghtkOrder->order()->with('items.product')->first();
-            
+
             if (!$order) {
                 return $newStatus;
             }
-            
+
             DB::beginTransaction();
             try {
                 // 📦 Cộng lại tồn kho nếu đơn hàng đã được thanh toán
                 $shouldRestoreStock = in_array($order->status, ['paid', 'processing']);
-                
+
                 if ($shouldRestoreStock && $order->items) {
                     foreach ($order->items as $item) {
                         $product = Product::lockForUpdate()->find($item->product_id);
@@ -171,7 +235,7 @@ class GHTKService
                 $order->update([
                     "status" => "cancelled",
                 ]);
-                
+
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
