@@ -16,15 +16,22 @@ class ProductReviewController extends Controller
             ->get();
     }
 
-    // ➕ Người dùng thêm review
+    // ➕ Người dùng thêm review (hoặc admin thêm)
     public function store(Request $request)
     {
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable|exists:users,id', // Optional - admin có thể thêm review không cần user
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string',
         ]);
+
+        // Nếu không có user_id, có thể là admin tự thêm review
+        // Có thể set user_id = null hoặc một user mặc định
+        if (empty($data['user_id'])) {
+            // Admin review - có thể để null hoặc tạo user "Admin" hoặc "Hệ thống"
+            $data['user_id'] = null; // Hoặc tìm user admin
+        }
 
         $review = ProductReview::create($data);
         return response()->json($review->load(['product', 'user']), 201);

@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         // Kiểm tra expired orders mỗi phút
         $schedule->job(new SendAnniversaryReminderJob)->dailyAt('00:00');
         $schedule->command('orders:cancel-expired')->everyMinute();
+        $schedule->command('ghtk:sync')->everyTenMinutes();
     }
 
     /**

@@ -145,6 +145,7 @@ const AdminOrders = () => {
   const getStatusColor = (status) => {
     const colors = {
       pending: { bg: 'rgba(255, 193, 7, 0.1)', color: '#ffc107' },
+      paid: { bg: 'rgba(0, 128, 0, 0.1)', color: '#008000' },
       processing: { bg: 'rgba(0, 123, 255, 0.1)', color: '#007bff' },
       completed: { bg: 'rgba(40, 167, 69, 0.1)', color: '#28a745' },
       cancelled: { bg: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }
@@ -181,6 +182,7 @@ const AdminOrders = () => {
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
                 <option value="processing">Processing</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -362,6 +364,7 @@ const AdminOrders = () => {
                                 }}
                               >
                                 <option value="pending">Pending</option>
+                                <option value="paid">Paid</option>
                                 <option value="processing">Processing</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>

@@ -289,11 +289,34 @@ export default function Checkout() {
       const amountFromAPI = Number(latestTx["Giá trị"]) || 0;
 
       if (description.includes(transferContent) && amountFromAPI >= amount) {
+        const currentToken = token || localStorage.getItem("token");
+        
+        // ✅ Gọi API markPaid để cập nhật trạng thái đơn hàng và giảm tồn kho
+        if (orderId) {
+          try {
+            await axios.post(
+              "http://localhost:8000/api/orders/mark-paid",
+              { order_id: orderId },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${currentToken}`,
+                },
+              }
+            );
+            console.log("✅ Đã cập nhật trạng thái đơn hàng thành paid và giảm tồn kho");
+          } catch (markPaidError) {
+            console.error("❌ Lỗi khi cập nhật trạng thái đơn hàng:", markPaidError);
+            // Vẫn hiển thị thông báo thành công cho người dùng
+            // Admin có thể cập nhật thủ công sau
+          }
+        }
+
         setPaymentStatus("paid");
         setPaymentMessage({ type: "success", text: "🎉 Thanh toán thành công!" });
         setCart({ items: [], total_amount: 0 });
 
-        const currentToken = token || localStorage.getItem("token");
+        // Xóa giỏ hàng
         await fetch("http://localhost:8000/api/cart/clear-cart", {
           method: "DELETE",
           headers: {

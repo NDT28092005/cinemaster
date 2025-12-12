@@ -35,8 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Product chatbot - public endpoint (có thể thêm auth nếu cần)
 Route::post('/chat/product-advice', [ChatController::class, 'productAdvice']);
-
-Route::post('/orders/calc-shipping', [OrderController::class, 'calcShipping']);
+Route::get('/ghtk/check/{label}', function($label, App\Services\GHTKService $ghtk) {
+    return $ghtk->getOrderStatus($label);
+});
 Route::post('/orders/mark-paid', [OrderController::class, 'markPaid']);
 // Route::post('/ghtk/webhook', [GHTKWebhookController::class, 'updateStatus']);
 // Promotions
@@ -103,7 +104,16 @@ Route::prefix('reviews')->group(function () {
     Route::patch('/{productReview}/block', [ProductReviewController::class, 'block']);
     Route::patch('/{productReview}/unblock', [ProductReviewController::class, 'unblock']);
 });
+// Categories routes - đặt routes đặc biệt TRƯỚC apiResource để tránh conflict
+Route::post('categories/import', [CategoryController::class, 'import']);
+Route::get('categories/export', [CategoryController::class, 'export']);
+Route::delete('categories/delete-all', [CategoryController::class, 'deleteAll']);
 Route::apiResource('categories', CategoryController::class);
+
+// Occasions routes - đặt routes đặc biệt TRƯỚC apiResource để tránh conflict
+Route::post('occasions/import', [OccasionController::class, 'import']);
+Route::get('occasions/export', [OccasionController::class, 'export']);
+Route::delete('occasions/delete-all', [OccasionController::class, 'deleteAll']);
 Route::apiResource('occasions', OccasionController::class);
 Route::apiResource('products', ProductController::class);
 Route::get('products/{id}', [ProductController::class, 'show']);

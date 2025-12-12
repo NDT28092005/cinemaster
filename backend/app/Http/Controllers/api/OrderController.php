@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use App\Services\GHTKService;
 
@@ -14,33 +15,45 @@ class OrderController extends Controller
      * 🧾 Danh sách đơn hàng
      */
     public function calcShipping(Request $request)
-{
-    $weight = $request->weight ?? 500; // gram
-    $province = $request->province;
-    $district = $request->district;
-    $ward = $request->ward;
+    {
+        $client = new \GuzzleHttp\Client();
 
-    $client = new \GuzzleHttp\Client();
-    $response = $client->post("https://services.ghtk.vn/services/shipment/fee", [
-        "headers" => [
-            "Token" => env("GHTK_TOKEN"),
-            "Content-Type" => "application/json",
-        ],
-        "json" => [
-            "province" => $province,
-            "district" => $district,
-            "ward" => $ward,
-            "pick_province" => "Đà Nẵng",
-            "pick_district" => "Hải Châu",
-            "weight" => $weight,
-        ]
-    ]);
+        $params = [
+            "address"       => $request->address ?? "",
+            "province"      => $request->province,
+            "district"      => $request->district,
+            "ward"          => $request->ward ?? "",
+            "weight"        => $request->weight ?? 500, // gram
+            "value"         => $request->value ?? 0,
 
-    $result = json_decode($response->getBody(), true);
-    return response()->json([
-        "shipping_fee" => $result['fee']['fee']
-    ]);
-}
+            // Thông tin nơi lấy hàng
+            "pick_province" => "Bình Dương",
+            "pick_district" => "Dĩ An",
+            "pick_ward"     => "Đông Hòa",
+            "pick_street"   => "Ký túc xá Khu B",
+            "pick_tel"      => "0946403788",
+        ];
+
+        $response = $client->get("https://services.ghtk.vn/services/shipment/fee", [
+            "headers" => [
+                "Token" => env("GHTK_TOKEN"),
+            ],
+            "query" => $params
+        ]);
+
+        $data = json_decode($response->getBody(), true);
+
+        if (!$data["success"]) {
+            return response()->json(["error" => "Không tính được phí"], 400);
+        }
+
+        return response()->json([
+            "name" => $data["fee"]["name"],
+            "shipping_fee" => $data["fee"]["fee"],
+            "insurance_fee" => $data["fee"]["insurance_fee"],
+            "delivery" => $data["fee"]["delivery"],
+        ]);
+    }
     public function index(Request $request)
     {
         $orders = Order::with(['user', 'items.product.images'])
@@ -126,13 +139,38 @@ class OrderController extends Controller
     public function markPaid(Request $request, GHTKService $ghtkService)
     {
         $request->validate(['order_id' => 'required|integer']);
-        $order = Order::find($request->order_id);
+        $order = Order::with('items.product')->find($request->order_id);
 
         if (!$order || $order->status !== 'pending') {
             return response()->json(['message' => 'Không thể cập nhật đơn hàng'], 400);
         }
 
-        $order->update(['status' => 'paid']);
+        DB::beginTransaction();
+        try {
+            // 📦 Giảm tồn kho khi thanh toán thành công
+            foreach ($order->items as $item) {
+                $product = Product::lockForUpdate()->find($item->product_id);
+                if ($product) {
+                    $newStock = $product->stock_quantity - $item->quantity;
+                    if ($newStock < 0) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => "Sản phẩm '{$product->name}' không đủ tồn kho. Tồn kho hiện tại: {$product->stock_quantity}, yêu cầu: {$item->quantity}",
+                        ], 400);
+                    }
+                    $product->update(['stock_quantity' => $newStock]);
+                }
+            }
+
+            $order->update(['status' => 'paid']);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Lỗi khi cập nhật đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
+        }
 
         // 🚚 Tạo vận đơn GHTK
         try {
@@ -159,7 +197,7 @@ class OrderController extends Controller
     {
         $order = Order::with(['user', 'items.product.images', 'payment'])
             ->findOrFail($id);
-        
+
         return response()->json($order);
     }
 
@@ -168,11 +206,128 @@ class OrderController extends Controller
      */
     public function cancelExpired()
     {
-        $count = Order::where('status', 'pending')
+        $expiredOrders = Order::with('items.product')
+            ->where('status', 'pending')
             ->where('expires_at', '<', now())
-            ->update(['status' => 'cancelled']);
+            ->get();
+
+        $count = 0;
+        foreach ($expiredOrders as $order) {
+            DB::beginTransaction();
+            try {
+                // Đơn hàng pending chưa thanh toán nên không cần cộng lại tồn kho
+                $order->update(['status' => 'cancelled']);
+                DB::commit();
+                $count++;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Error cancelling expired order', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
 
         return response()->json(['message' => "Đã hủy $count đơn hàng quá hạn"]);
+    }
+
+    /**
+     * 🔄 Cập nhật trạng thái đơn hàng (Admin)
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:pending,paid,processing,completed,cancelled'
+        ]);
+
+        $order = Order::with('items.product')->findOrFail($id);
+        $oldStatus = $order->status;
+        $newStatus = $request->status;
+
+        // Nếu trạng thái không thay đổi, không cần làm gì
+        if ($oldStatus === $newStatus) {
+            return response()->json([
+                'message' => 'Trạng thái đơn hàng không thay đổi',
+                'order' => $order
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 📦 Xử lý tồn kho khi thay đổi trạng thái
+            
+            // Trường hợp 1: pending → paid (thanh toán thành công) → Giảm tồn kho
+            if ($oldStatus === 'pending' && $newStatus === 'paid') {
+                foreach ($order->items as $item) {
+                    $product = Product::lockForUpdate()->find($item->product_id);
+                    if ($product) {
+                        $newStock = $product->stock_quantity - $item->quantity;
+                        if ($newStock < 0) {
+                            DB::rollBack();
+                            return response()->json([
+                                'message' => "Sản phẩm '{$product->name}' không đủ tồn kho. Tồn kho hiện tại: {$product->stock_quantity}, yêu cầu: {$item->quantity}",
+                            ], 400);
+                        }
+                        $product->update(['stock_quantity' => $newStock]);
+                    }
+                }
+            }
+            
+            // Trường hợp 2: paid/processing → cancelled → Cộng lại tồn kho
+            if (in_array($oldStatus, ['paid', 'processing']) && $newStatus === 'cancelled') {
+                foreach ($order->items as $item) {
+                    $product = Product::lockForUpdate()->find($item->product_id);
+                    if ($product) {
+                        $product->increment('stock_quantity', $item->quantity);
+                    }
+                }
+            }
+            
+            // Trường hợp 3: cancelled → paid (khôi phục đơn hàng) → Giảm tồn kho lại
+            if ($oldStatus === 'cancelled' && $newStatus === 'paid') {
+                foreach ($order->items as $item) {
+                    $product = Product::lockForUpdate()->find($item->product_id);
+                    if ($product) {
+                        $newStock = $product->stock_quantity - $item->quantity;
+                        if ($newStock < 0) {
+                            DB::rollBack();
+                            return response()->json([
+                                'message' => "Sản phẩm '{$product->name}' không đủ tồn kho. Tồn kho hiện tại: {$product->stock_quantity}, yêu cầu: {$item->quantity}",
+                            ], 400);
+                        }
+                        $product->update(['stock_quantity' => $newStock]);
+                    }
+                }
+            }
+
+            // Cập nhật trạng thái đơn hàng
+            $updateData = ['status' => $newStatus];
+            
+            // Nếu hủy đơn, thêm thông tin hủy
+            if ($newStatus === 'cancelled') {
+                $updateData['cancelled_at'] = now();
+                if (!$order->cancellation_reason) {
+                    $updateData['cancellation_reason'] = 'admin_cancelled';
+                }
+            }
+
+            $order->update($updateData);
+            DB::commit();
+
+            // Load lại order với relationships
+            $order->load(['user', 'items.product.images']);
+
+            return response()->json([
+                'message' => 'Cập nhật trạng thái đơn hàng thành công',
+                'order' => $order
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Lỗi khi cập nhật trạng thái đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -202,15 +357,38 @@ class OrderController extends Controller
         }
 
         // Lấy lý do hủy từ request (hỗ trợ cả 'reason' và 'cancel_reason')
-        $cancellationReason = $request->input('reason') 
-            ?? $request->input('cancel_reason') 
+        $cancellationReason = $request->input('reason')
+            ?? $request->input('cancel_reason')
             ?? 'customer_cancelled';
 
-        $order->update([
-            'status' => 'cancelled',
-            'cancelled_at' => now(),
-            'cancellation_reason' => $cancellationReason,
-        ]);
+        DB::beginTransaction();
+        try {
+            // 📦 Cộng lại tồn kho nếu đơn hàng đã được thanh toán (paid hoặc processing)
+            $shouldRestoreStock = in_array($order->status, ['paid', 'processing']);
+            
+            if ($shouldRestoreStock) {
+                foreach ($order->items as $item) {
+                    $product = Product::lockForUpdate()->find($item->product_id);
+                    if ($product) {
+                        $product->increment('stock_quantity', $item->quantity);
+                    }
+                }
+            }
+
+            $order->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancellation_reason' => $cancellationReason,
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Lỗi khi hủy đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
+        }
 
         // Load lại order với các relationships (không load payment nếu không cần)
         $order->load(['items.product.images']);
