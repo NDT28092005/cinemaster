@@ -506,25 +506,9 @@ export default function Checkout() {
       <div>
         <Header />
         <Container className="mt-5 pt-5">
-          <div style={{
-            minHeight: '60vh',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '20px',
-            padding: '4rem 0'
-          }}>
-            <div style={{ 
-              width: '60px', 
-              height: '60px', 
-              border: '5px solid rgba(251, 99, 118, 0.2)', 
-              borderTopColor: '#FB6376', 
-              borderRightColor: '#FCB1A6', 
-              borderRadius: '50%', 
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <p style={{ color: '#5D2A42', fontSize: '1rem', fontWeight: '500', margin: 0 }}>
+          <div className="checkout-loading-container">
+            <div className="checkout-spinner"></div>
+            <p className="checkout-loading-text">
               Đang tải thông tin...
             </p>
           </div>
@@ -539,15 +523,10 @@ export default function Checkout() {
       <div>
         <Header />
         <Container className="mt-5 pt-5">
-          <Card style={{
-            borderRadius: '20px',
-            border: '2px solid rgba(220, 53, 69, 0.2)',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 249, 236, 0.9))',
-            padding: '2rem'
-          }}>
+          <Card className="checkout-error-card">
             <Card.Body>
-              <h2 style={{ color: '#5D2A42', marginBottom: '1rem' }}>Lỗi</h2>
-              <p style={{ color: '#666', marginBottom: '1.5rem' }}>{error}</p>
+              <h2 className="checkout-error-title">Lỗi</h2>
+              <p className="checkout-error-text">{error}</p>
               <Button onClick={() => window.location.reload()}>Thử lại</Button>
             </Card.Body>
           </Card>
@@ -561,189 +540,79 @@ export default function Checkout() {
     <div className="checkout-page-wrapper">
       <Header />
       <Container className="mt-5 pt-5 checkout-container">
-        <div style={{
-          marginBottom: '2.5rem',
-          animation: 'fadeInUp 0.6s ease-out'
-        }}>
+        <div className="checkout-header-section">
           <Button
             variant="link"
             onClick={() => navigate('/cart')}
-            style={{
-              color: '#5D2A42',
-              textDecoration: 'none',
-              padding: 0,
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
+            className="checkout-back-button"
           >
             <FaArrowLeft /> Quay lại giỏ hàng
           </Button>
-          <h1 style={{
-            color: '#5D2A42',
-            fontSize: '2.5rem',
-            fontWeight: 700,
-            letterSpacing: '-0.5px',
-            marginBottom: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
+          <h1 className="checkout-title">
             <FaCreditCard />
             Thanh toán
           </h1>
-          <p style={{
-            color: '#666',
-            fontSize: '1rem',
-            margin: 0
-          }}>
+          <p className="checkout-subtitle">
             Điền thông tin giao hàng và chọn phương thức thanh toán
           </p>
         </div>
 
         {error && (
-          <div className="alert alert-danger" style={{
-            borderRadius: '15px',
-            border: '2px solid rgba(220, 53, 69, 0.2)',
-            background: 'linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05))',
-            animation: 'slideDown 0.3s ease-out',
-            marginBottom: '2rem'
-          }}>
+          <div className="alert alert-danger checkout-error-alert">
             {error}
           </div>
         )}
 
         <Row>
           <Col lg={8}>
-            <Card style={{
-              borderRadius: '20px',
-              border: '2px solid rgba(251, 99, 118, 0.15)',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 249, 236, 0.9))',
-              boxShadow: '0 8px 25px rgba(93, 42, 66, 0.1)',
-              animation: 'fadeInUp 0.6s ease-out 0.2s both'
-            }}>
-              <Card.Body style={{ padding: '2.5rem' }}>
-                <h2 style={{
-                  color: '#5D2A42',
-                  marginBottom: '2rem',
-                  fontWeight: 700,
-                  fontSize: '1.8rem',
-                  position: 'relative',
-                  paddingBottom: '1rem'
-                }}>
+            <Card className="checkout-main-card">
+              <Card.Body className="checkout-card-body">
+                <h2 className="checkout-section-title">
                   Thông tin giao hàng
-                  <span style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: '60px',
-                    height: '3px',
-                    background: 'linear-gradient(90deg, #FB6376, #FCB1A6)',
-                    borderRadius: '2px'
-                  }}></span>
                 </h2>
 
                 {/* Địa chỉ nhận hàng - Shopee style */}
-                <div className="delivery-address-section" style={{
-                  marginBottom: '2rem',
-                  padding: '1.5rem',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  borderRadius: '15px',
-                  border: '2px solid rgba(251, 99, 118, 0.1)'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    marginBottom: '1rem'
-                  }}>
-                    <FaMapMarkerAlt style={{ color: '#FB6376', fontSize: '1.2rem' }} />
-                    <h3 style={{
-                      color: '#FB6376',
-                      fontSize: '1.1rem',
-                      fontWeight: 600,
-                      margin: 0
-                    }}>
+                <div className="delivery-address-section">
+                  <div className="address-header-row">
+                    <FaMapMarkerAlt className="address-header-icon" />
+                    <h3 className="address-header-title">
                       Địa Chỉ Nhận Hàng
                     </h3>
                   </div>
 
                   {selectedAddress ? (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: '1rem',
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <div style={{
-                          fontWeight: 600,
-                          color: '#5D2A42',
-                          marginBottom: '0.5rem',
-                          fontSize: '1rem'
-                        }}>
+                    <div className="address-content-wrapper">
+                      <div className="address-details-wrapper">
+                        <div className="recipient-name-display">
                           {user?.name || customerName || "Người nhận"}
                           {customerPhone && ` (+84) ${customerPhone.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3,4})/, '$1 $2 $3')}`}
                         </div>
-                        <div style={{
-                          color: '#666',
-                          fontSize: '0.95rem',
-                          lineHeight: '1.6'
-                        }}>
+                        <div className="address-text-display">
                           {formatAddress(selectedAddress)}
                         </div>
                       </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        alignItems: 'flex-start'
-                      }}>
+                      <div className="address-actions-wrapper">
                         {selectedAddress.is_default && (
-                          <span style={{
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: '4px',
-                            border: '1px solid #FF9800',
-                            color: '#FF9800',
-                            fontSize: '0.85rem',
-                            fontWeight: 500
-                          }}>
+                          <span className="default-badge">
                             Mặc Định
                           </span>
                         )}
                         <Button
                           variant="link"
                           onClick={() => setShowAddressModal(true)}
-                          style={{
-                            padding: 0,
-                            color: '#1890ff',
-                            textDecoration: 'none',
-                            fontSize: '0.95rem',
-                            fontWeight: 500
-                          }}
+                          className="change-address-button"
                         >
                           Thay Đổi
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '2rem',
-                      color: '#666'
-                    }}>
-                      <p style={{ marginBottom: '1rem' }}>Chưa có địa chỉ giao hàng</p>
+                    <div className="empty-address-container">
+                      <p className="empty-address-text">Chưa có địa chỉ giao hàng</p>
                       <Button
                         variant="outline-primary"
                         onClick={() => navigate('/add-address', { state: { returnTo: '/checkout' } })}
-                        style={{
-                          borderRadius: '8px',
-                          padding: '0.5rem 1.5rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
-                        }}
+                        className="add-address-button"
                       >
                         <FaPlus /> Thêm địa chỉ mới
                       </Button>
@@ -755,96 +624,45 @@ export default function Checkout() {
                   <Row className="g-3">
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label style={{
-                          color: '#5D2A42',
-                          fontWeight: 600,
-                          marginBottom: '0.5rem'
-                        }}>
-                          Họ tên người nhận <span style={{ color: '#FB6376' }}>*</span>
+                        <Form.Label className="checkout-form-label">
+                          Họ tên người nhận <span className="required-asterisk">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
                           placeholder="Nhập tên người nhận"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
-                          style={{
-                            borderRadius: '15px',
-                            border: '2px solid rgba(251, 99, 118, 0.2)',
-                            fontSize: '0.95rem',
-                            padding: '0.85rem 1.2rem',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onFocus={(e) => {
-                            e.target.style.borderColor = '#FB6376';
-                            e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                          }}
-                          onBlur={(e) => {
-                            e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          className="checkout-form-control"
                         />
                       </Form.Group>
                     </Col>
 
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label style={{
-                          color: '#5D2A42',
-                          fontWeight: 600,
-                          marginBottom: '0.5rem'
-                        }}>
-                          Số điện thoại <span style={{ color: '#FB6376' }}>*</span>
+                        <Form.Label className="checkout-form-label">
+                          Số điện thoại <span className="required-asterisk">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
                           placeholder="Nhập số điện thoại"
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
-                          style={{
-                            borderRadius: '15px',
-                            border: '2px solid rgba(251, 99, 118, 0.2)',
-                            fontSize: '0.95rem',
-                            padding: '0.85rem 1.2rem',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onFocus={(e) => {
-                            e.target.style.borderColor = '#FB6376';
-                            e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                          }}
-                          onBlur={(e) => {
-                            e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          className="checkout-form-control"
                         />
                       </Form.Group>
                     </Col>
 
                     {/* Tùy chọn quà tặng */}
                     <Col xs={12}>
-                      <div style={{
-                        marginTop: '2rem',
-                        padding: '1.5rem',
-                        background: 'rgba(255, 255, 255, 0.7)',
-                        borderRadius: '15px',
-                        border: '2px solid rgba(251, 99, 118, 0.1)'
-                      }}>
-                        <h3 style={{
-                          color: '#5D2A42',
-                          marginBottom: '1.5rem',
-                          fontWeight: 600,
-                          fontSize: '1.2rem'
-                        }}>
+                      <div className="gift-options-container">
+                        <h3 className="gift-options-title">
                           Tùy chọn quà tặng
                         </h3>
 
                         <Row className="g-3">
                           <Col md={6}>
                             <Form.Group className="mb-3">
-                              <Form.Label style={{
-                                color: '#5D2A42',
-                                fontWeight: 600,
-                                marginBottom: '0.5rem'
-                              }}>
+                              <Form.Label className="checkout-form-label">
                                 Giấy gói
                               </Form.Label>
                               <Form.Select
@@ -855,22 +673,7 @@ export default function Checkout() {
                                   setWrappingPaper(selected ? selected.name : '');
                                   setWrappingPaperImage(selected ? selected.image_url : '');
                                 }}
-                                style={{
-                                  borderRadius: '15px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  fontSize: '0.95rem',
-                                  padding: '0.85rem 1.2rem',
-                                  transition: 'all 0.3s ease',
-                                  background: 'white'
-                                }}
-                                onFocus={(e) => {
-                                  e.target.style.borderColor = '#FB6376';
-                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                                }}
-                                onBlur={(e) => {
-                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                                  e.target.style.boxShadow = 'none';
-                                }}
+                                className="checkout-form-select"
                               >
                                 <option value="">Chọn giấy gói</option>
                                 {wrappingPapers.map(paper => (
@@ -880,36 +683,13 @@ export default function Checkout() {
                                 ))}
                               </Form.Select>
                               {wrappingPaperImage && wrappingPaperImage.trim() && (
-                                <div style={{
-                                  marginTop: '1rem',
-                                  padding: '1rem',
-                                  background: 'white',
-                                  borderRadius: '10px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  textAlign: 'center'
-                                }}>
-                                  <div style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: 600,
-                                    color: '#5D2A42',
-                                    marginBottom: '0.5rem'
-                                  }}>Xem trước:</div>
-                                  <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    minHeight: '150px'
-                                  }}>
+                                <div className="preview-image-container">
+                                  <div className="preview-label">Xem trước:</div>
+                                  <div className="preview-image-wrapper">
                                     <img
                                       src={wrappingPaperImage}
                                       alt={wrappingPaper}
-                                      style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '200px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ddd',
-                                        objectFit: 'contain'
-                                      }}
+                                      className="preview-image"
                                       onError={(e) => {
                                         e.target.onerror = null;
                                         e.target.style.display = 'none';
@@ -928,11 +708,7 @@ export default function Checkout() {
 
                           <Col md={6}>
                             <Form.Group className="mb-3">
-                              <Form.Label style={{
-                                color: '#5D2A42',
-                                fontWeight: 600,
-                                marginBottom: '0.5rem'
-                              }}>
+                              <Form.Label className="checkout-form-label">
                                 Phụ kiện trang trí
                               </Form.Label>
                               <Form.Select
@@ -943,22 +719,7 @@ export default function Checkout() {
                                   setDecorativeAccessories(selected ? selected.name : '');
                                   setDecorativeAccessoryImage(selected ? selected.image_url : '');
                                 }}
-                                style={{
-                                  borderRadius: '15px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  fontSize: '0.95rem',
-                                  padding: '0.85rem 1.2rem',
-                                  transition: 'all 0.3s ease',
-                                  background: 'white'
-                                }}
-                                onFocus={(e) => {
-                                  e.target.style.borderColor = '#FB6376';
-                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                                }}
-                                onBlur={(e) => {
-                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                                  e.target.style.boxShadow = 'none';
-                                }}
+                                className="checkout-form-select"
                               >
                                 <option value="">Chọn phụ kiện</option>
                                 {decorativeAccessoriesList.map(accessory => (
@@ -968,36 +729,13 @@ export default function Checkout() {
                                 ))}
                               </Form.Select>
                               {decorativeAccessoryImage && decorativeAccessoryImage.trim() && (
-                                <div style={{
-                                  marginTop: '1rem',
-                                  padding: '1rem',
-                                  background: 'white',
-                                  borderRadius: '10px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  textAlign: 'center'
-                                }}>
-                                  <div style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: 600,
-                                    color: '#5D2A42',
-                                    marginBottom: '0.5rem'
-                                  }}>Xem trước:</div>
-                                  <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    minHeight: '150px'
-                                  }}>
+                                <div className="preview-image-container">
+                                  <div className="preview-label">Xem trước:</div>
+                                  <div className="preview-image-wrapper">
                                     <img
                                       src={decorativeAccessoryImage}
                                       alt={decorativeAccessories}
-                                      style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '200px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ddd',
-                                        objectFit: 'contain'
-                                      }}
+                                      className="preview-image"
                                       onError={(e) => {
                                         e.target.onerror = null;
                                         e.target.style.display = 'none';
@@ -1016,11 +754,7 @@ export default function Checkout() {
 
                           <Col xs={12}>
                             <Form.Group className="mb-3">
-                              <Form.Label style={{
-                                color: '#5D2A42',
-                                fontWeight: 600,
-                                marginBottom: '0.5rem'
-                              }}>
+                              <Form.Label className="checkout-form-label">
                                 Loại thiệp
                               </Form.Label>
                               <Form.Select
@@ -1031,22 +765,7 @@ export default function Checkout() {
                                   setCardType(selected ? selected.name : '');
                                   setCardTypeImage(selected ? selected.image_url : '');
                                 }}
-                                style={{
-                                  borderRadius: '15px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  fontSize: '0.95rem',
-                                  padding: '0.85rem 1.2rem',
-                                  transition: 'all 0.3s ease',
-                                  background: 'white'
-                                }}
-                                onFocus={(e) => {
-                                  e.target.style.borderColor = '#FB6376';
-                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                                }}
-                                onBlur={(e) => {
-                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                                  e.target.style.boxShadow = 'none';
-                                }}
+                                className="checkout-form-select"
                               >
                                 <option value="">Chọn loại thiệp</option>
                                 {cardTypes.map(card => (
@@ -1056,36 +775,13 @@ export default function Checkout() {
                                 ))}
                               </Form.Select>
                               {cardTypeImage && cardTypeImage.trim() && (
-                                <div style={{
-                                  marginTop: '1rem',
-                                  padding: '1rem',
-                                  background: 'white',
-                                  borderRadius: '10px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  textAlign: 'center'
-                                }}>
-                                  <div style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: 600,
-                                    color: '#5D2A42',
-                                    marginBottom: '0.5rem'
-                                  }}>Xem trước:</div>
-                                  <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    minHeight: '150px'
-                                  }}>
+                                <div className="preview-image-container">
+                                  <div className="preview-label">Xem trước:</div>
+                                  <div className="preview-image-wrapper">
                                     <img
                                       src={cardTypeImage}
                                       alt={cardType}
-                                      style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '200px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ddd',
-                                        objectFit: 'contain'
-                                      }}
+                                      className="preview-image"
                                       onError={(e) => {
                                         e.target.onerror = null;
                                         e.target.style.display = 'none';
@@ -1104,11 +800,7 @@ export default function Checkout() {
 
                           <Col xs={12}>
                             <Form.Group className="mb-3">
-                              <Form.Label style={{
-                                color: '#5D2A42',
-                                fontWeight: 600,
-                                marginBottom: '0.5rem'
-                              }}>
+                              <Form.Label className="checkout-form-label">
                                 Ghi chú cho thiệp
                               </Form.Label>
                               <Form.Control
@@ -1117,25 +809,10 @@ export default function Checkout() {
                                 placeholder="Nhập lời chúc hoặc ghi chú bạn muốn ghi trên thiệp..."
                                 value={cardNote}
                                 onChange={(e) => setCardNote(e.target.value)}
-                                style={{
-                                  borderRadius: '15px',
-                                  border: '2px solid rgba(251, 99, 118, 0.2)',
-                                  fontSize: '0.95rem',
-                                  padding: '0.85rem 1.2rem',
-                                  transition: 'all 0.3s ease',
-                                  resize: 'vertical'
-                                }}
-                                onFocus={(e) => {
-                                  e.target.style.borderColor = '#FB6376';
-                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                                }}
-                                onBlur={(e) => {
-                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                                  e.target.style.boxShadow = 'none';
-                                }}
+                                className="checkout-form-control"
                                 maxLength={500}
                               />
-                              <Form.Text className="text-muted" style={{ fontSize: '0.85rem' }}>
+                              <Form.Text className="text-muted character-count">
                                 {cardNote.length}/500 ký tự
                               </Form.Text>
                             </Form.Group>
@@ -1146,32 +823,13 @@ export default function Checkout() {
 
                     <Col xs={12}>
                       <Form.Group className="mb-3">
-                        <Form.Label style={{
-                          color: '#5D2A42',
-                          fontWeight: 600,
-                          marginBottom: '0.5rem'
-                        }}>
-                          Phương thức thanh toán <span style={{ color: '#FB6376' }}>*</span>
+                        <Form.Label className="checkout-form-label">
+                          Phương thức thanh toán <span className="required-asterisk">*</span>
                         </Form.Label>
                         <Form.Select
                           value={paymentMethod}
                           onChange={(e) => setPaymentMethod(e.target.value)}
-                          style={{
-                            borderRadius: '15px',
-                            border: '2px solid rgba(251, 99, 118, 0.2)',
-                            fontSize: '0.95rem',
-                            padding: '0.85rem 1.2rem',
-                            transition: 'all 0.3s ease',
-                            background: 'white'
-                          }}
-                          onFocus={(e) => {
-                            e.target.style.borderColor = '#FB6376';
-                            e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                          }}
-                          onBlur={(e) => {
-                            e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          className="checkout-form-select"
                         >
                           <option value="bank_transfer">Chuyển khoản ngân hàng</option>
                           <option value="momo">MoMo</option>
@@ -1243,50 +901,21 @@ export default function Checkout() {
 
                 {/* Order Items Summary */}
                 {cart?.items && cart.items.length > 0 && (
-                  <div style={{
-                    marginBottom: '1.5rem',
-                    paddingBottom: '1.5rem',
-                    borderBottom: '2px solid rgba(251, 99, 118, 0.1)'
-                  }}>
-                    <h3 style={{
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      color: '#5D2A42',
-                      marginBottom: '1rem'
-                    }}>
+                  <div className="order-items-container">
+                    <h3 className="order-items-title">
                       Sản phẩm ({cart.items.length})
                     </h3>
                     {cart.items.map((item) => (
-                      <div key={item.id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '0.75rem',
-                        padding: '0.75rem',
-                        background: 'rgba(255, 255, 255, 0.5)',
-                        borderRadius: '10px'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            fontSize: '0.9rem',
-                            color: '#5D2A42',
-                            fontWeight: 500,
-                            marginBottom: '0.25rem'
-                          }}>
+                      <div key={item.id} className="order-item-row">
+                        <div className="order-item-info">
+                          <div className="order-item-name">
                             {item.product?.name || "Unknown Product"}
                           </div>
-                          <div style={{
-                            fontSize: '0.85rem',
-                            color: '#666'
-                          }}>
+                          <div className="order-item-details">
                             {formatPrice(item.product?.price || 0)} x {item.quantity}
                           </div>
                         </div>
-                        <div style={{
-                          fontSize: '1rem',
-                          fontWeight: 600,
-                          color: '#FB6376'
-                        }}>
+                        <div className="order-item-price">
                           {formatPrice((item.product?.price || 0) * item.quantity)}
                         </div>
                       </div>
@@ -1295,138 +924,63 @@ export default function Checkout() {
                 )}
 
 
-                <div style={{
-                  marginBottom: '1.5rem'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.95rem',
-                    color: '#666'
-                  }}>
-                    <span>Tạm tính:</span>
-                    <span style={{ fontWeight: 600, color: '#5D2A42' }}>
+                <div className="price-summary-container">
+                  <div className="price-row">
+                    <span className="price-label">Tạm tính:</span>
+                    <span className="price-value">
                       {formatPrice(cart?.total_amount || 0)}
                     </span>
                   </div>
                   {loyaltyPointsUsed > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '0.75rem',
-                      fontSize: '0.95rem',
-                      color: '#28a745'
-                    }}>
-                      <span>Giảm giá (điểm thưởng):</span>
-                      <span style={{ fontWeight: 600, color: '#28a745' }}>
+                    <div className="price-row price-row-discount">
+                      <span className="price-label">Giảm giá (điểm thưởng):</span>
+                      <span className="price-value">
                         -{formatPrice(loyaltyPointsUsed * 100)}
                       </span>
                     </div>
                   )}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.95rem',
-                    color: '#666'
-                  }}>
-                    <span>Phí vận chuyển:</span>
-                    <span style={{
-                      fontWeight: 600,
-                      color: '#28a745'
-                    }}>
+                  <div className="price-row price-row-shipping">
+                    <span className="price-label">Phí vận chuyển:</span>
+                    <span className="price-value">
                       Miễn phí
                     </span>
                   </div>
-                  <hr style={{
-                    borderColor: 'rgba(251, 99, 118, 0.2)',
-                    margin: '1rem 0'
-                  }} />
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '1.3rem',
-                    fontWeight: 700
-                  }}>
-                    <span style={{
-                      color: '#5D2A42'
-                    }}>
+                  <hr className="price-divider" />
+                  <div className="price-total-row">
+                    <span className="price-total-label">
                       Tổng cộng:
                     </span>
-                    <span style={{
-                      background: 'linear-gradient(135deg, #FB6376, #FCB1A6)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
-                    }}>
+                    <span className="price-total-value">
                       {formatPrice(Math.max(0, (cart?.total_amount || 0) - (loyaltyPointsUsed * 100)))}
                     </span>
                   </div>
                 </div>
 
                 <Button
-                  className="btn-book w-100"
+                  className="btn-book w-100 checkout-submit-button"
                   onClick={handleCheckout}
                   disabled={submitting || !deliveryAddress.trim() || !cart?.items?.length}
-                  style={{
-                    padding: '1rem',
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    borderRadius: '30px',
-                    marginBottom: '1rem'
-                  }}
                 >
                   {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
                 </Button>
 
                 {timeLeft > 0 && paymentStatus === "pending" && (
-                  <div style={{
-                    padding: '1rem',
-                    background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.05))',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(255, 193, 7, 0.2)',
-                    textAlign: 'center',
-                    animation: 'pulse 2s infinite',
-                    marginBottom: '1rem'
-                  }}>
-                    <FaClock style={{ marginRight: '0.5rem', color: '#FFC107' }} />
-                    <strong style={{ color: '#5D2A42' }}>
-                      Thời gian thanh toán còn lại: {Math.floor(timeLeft / 60)}:{('0' + (timeLeft % 60)).slice(-2)}
-                    </strong>
+                  <div className="payment-timer">
+                    <FaClock className="me-2" />
+                    <strong>Thời gian thanh toán còn lại: {Math.floor(timeLeft / 60)}:{('0' + (timeLeft % 60)).slice(-2)}</strong>
                   </div>
                 )}
 
                 {paymentStatus === "cancelled" && (
-                  <div style={{
-                    padding: '1rem',
-                    background: 'linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05))',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(220, 53, 69, 0.2)',
-                    textAlign: 'center',
-                    color: '#dc3545',
-                    marginBottom: '1rem'
-                  }}>
-                    <FaTimesCircle style={{ marginRight: '0.5rem' }} />
+                  <div className="payment-status-cancelled">
+                    <FaTimesCircle className="me-2" />
                     Đơn hàng đã hủy do hết thời gian thanh toán
                   </div>
                 )}
 
                 {paymentStatus === "paid" && (
-                  <div style={{
-                    padding: '1rem',
-                    background: 'linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.05))',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(40, 167, 69, 0.2)',
-                    textAlign: 'center',
-                    color: '#28a745',
-                    marginBottom: '1rem'
-                  }}>
-                    <FaCheckCircle style={{ marginRight: '0.5rem' }} />
+                  <div className="payment-status-paid">
+                    <FaCheckCircle className="me-2" />
                     <strong>Thanh toán thành công!</strong>
                   </div>
                 )}
@@ -1436,20 +990,7 @@ export default function Checkout() {
             {/* QR Code Modal Overlay */}
             {qrCode && (
               <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  zIndex: 9999,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  padding: '1rem',
-                  animation: 'fadeIn 0.3s ease-out',
-                  overflow: 'auto'
-                }}
+                className="qr-modal-overlay"
                 onClick={(e) => {
                   // Đóng modal khi click vào backdrop
                   if (e.target === e.currentTarget) {
@@ -1458,95 +999,29 @@ export default function Checkout() {
                 }}
               >
                 {/* Backdrop với blur */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.7)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)'
-                  }}
-                />
+                <div className="qr-modal-backdrop" />
                 
                 {/* QR Code Modal */}
                 <Card
-                  style={{
-                    position: 'relative',
-                    zIndex: 10000,
-                    borderRadius: '25px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 236, 0.95))',
-                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                    maxWidth: '550px',
-                    width: '100%',
-                    margin: 'auto',
-                    animation: 'scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    overflow: 'hidden'
-                  }}
+                  className="qr-modal-card"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Close button */}
                   <button
                     onClick={() => setQrCode('')}
-                    style={{
-                      position: 'absolute',
-                      top: '1rem',
-                      right: '1rem',
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'rgba(251, 99, 118, 0.1)',
-                      color: '#FB6376',
-                      fontSize: '1.5rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 10001,
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(251, 99, 118, 0.2)';
-                      e.currentTarget.style.transform = 'rotate(90deg)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(251, 99, 118, 0.1)';
-                      e.currentTarget.style.transform = 'rotate(0deg)';
-                    }}
+                    className="qr-modal-close-button"
                   >
                     ×
                   </button>
 
-                  <Card.Body style={{ padding: '3rem 2rem' }}>
+                  <Card.Body className="qr-modal-body">
                     {/* Payment Message */}
                     {paymentMessage && (
-                      <div style={{
-                        padding: '1.5rem',
-                        marginBottom: '2rem',
-                        borderRadius: '20px',
-                        background: paymentMessage.type === 'success' 
-                          ? 'linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(40, 167, 69, 0.1))'
-                          : 'linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.1))',
-                        border: `3px solid ${paymentMessage.type === 'success' ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`,
-                        textAlign: 'center',
-                        animation: 'fadeInUp 0.5s ease-out'
-                      }}>
-                        <div style={{
-                          fontSize: '3rem',
-                          marginBottom: '1rem'
-                        }}>
+                      <div className={`payment-message-container ${paymentMessage.type === 'success' ? 'success' : 'error'}`}>
+                        <div className="payment-message-icon">
                           {paymentMessage.type === 'success' ? '✅' : '❌'}
                         </div>
-                        <h4 style={{
-                          color: paymentMessage.type === 'success' ? '#28a745' : '#dc3545',
-                          fontSize: '1.5rem',
-                          fontWeight: 700,
-                          margin: 0
-                        }}>
+                        <h4 className={`payment-message-text ${paymentMessage.type === 'success' ? 'success' : 'error'}`}>
                           {paymentMessage.text}
                         </h4>
                       </div>
@@ -1554,50 +1029,17 @@ export default function Checkout() {
 
                     {!paymentMessage && (
                       <>
-                        <h3 style={{
-                          color: '#5D2A42',
-                          marginBottom: '2rem',
-                          fontWeight: 700,
-                          fontSize: '1.5rem',
-                          textAlign: 'center'
-                        }}>
+                        <h3 className="qr-modal-title">
                           Quét mã VietQR để thanh toán
                         </h3>
                         
                         {/* QR Code - To và rõ ràng, căn giữa hoàn hảo */}
-                        <div style={{ 
-                          textAlign: 'center', 
-                          marginBottom: '2rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          width: '100%'
-                        }}>
-                          <div style={{
-                            padding: '1.5rem',
-                            background: 'white',
-                            borderRadius: '20px',
-                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            margin: '0 auto'
-                          }}>
+                        <div className="qr-code-container">
+                          <div className="qr-code-wrapper">
                             <img
                               src={qrCode}
                               alt="VietQR"
-                              style={{
-                                width: '400px',
-                                height: '400px',
-                                maxWidth: 'calc(100vw - 4rem)',
-                                maxHeight: 'calc(70vh - 200px)',
-                                objectFit: 'contain',
-                                borderRadius: '15px',
-                                border: '3px solid rgba(251, 99, 118, 0.2)',
-                                background: 'white',
-                                display: 'block',
-                                margin: '0 auto'
-                              }}
+                              className="qr-code-image"
                             />
                           </div>
                         </div>
@@ -1606,82 +1048,33 @@ export default function Checkout() {
 
                     {/* Payment Info - Chỉ hiển thị khi chưa có thông báo */}
                     {!paymentMessage && (
-                      <div style={{
-                        background: 'rgba(255, 255, 255, 0.7)',
-                        borderRadius: '20px',
-                        padding: '2rem',
-                        border: '2px solid rgba(251, 99, 118, 0.1)'
-                      }}>
-                      <div style={{
-                        marginBottom: '1.5rem',
-                        paddingBottom: '1.5rem',
-                        borderBottom: '2px solid rgba(251, 99, 118, 0.1)'
-                      }}>
-                        <div style={{
-                          fontSize: '0.95rem',
-                          color: '#666',
-                          marginBottom: '0.75rem',
-                          fontWeight: 500
-                        }}>
-                          <strong style={{ color: '#5D2A42' }}>Nội dung chuyển khoản:</strong>
+                      <div className="payment-info-container">
+                      <div className="payment-info-section">
+                        <div className="payment-info-label">
+                          <strong>Nội dung chuyển khoản:</strong>
                         </div>
-                        <div style={{
-                          fontSize: '1.1rem',
-                          fontWeight: 600,
-                          color: '#FB6376',
-                          wordBreak: 'break-word',
-                          padding: '0.75rem',
-                          background: 'rgba(251, 99, 118, 0.05)',
-                          borderRadius: '10px'
-                        }}>
+                        <div className="payment-info-value">
                           {transferContent}
                         </div>
                       </div>
-                      <div style={{
-                        marginBottom: '1.5rem',
-                        paddingBottom: '1.5rem',
-                        borderBottom: '2px solid rgba(251, 99, 118, 0.1)'
-                      }}>
-                        <div style={{
-                          fontSize: '0.95rem',
-                          color: '#666',
-                          marginBottom: '0.75rem',
-                          fontWeight: 500
-                        }}>
-                          <strong style={{ color: '#5D2A42' }}>Số tiền cần thanh toán:</strong>
+                      <div className="payment-info-section">
+                        <div className="payment-info-label">
+                          <strong>Số tiền cần thanh toán:</strong>
                         </div>
-                        <div style={{
-                          fontSize: '1.8rem',
-                          fontWeight: 700,
-                          background: 'linear-gradient(135deg, #FB6376, #FCB1A6)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text',
-                          textAlign: 'center'
-                        }}>
+                        <div className="payment-info-amount">
                           {formatPrice(amount)}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <Badge bg={paymentStatus === "paid" ? "success" : paymentStatus === "pending" ? "warning" : "danger"} style={{
-                          fontSize: '1rem',
-                          padding: '0.75rem 1.5rem',
-                          borderRadius: '25px',
-                          fontWeight: 600
-                        }}>
+                      <div className="text-center">
+                        <Badge bg={paymentStatus === "paid" ? "success" : paymentStatus === "pending" ? "warning" : "danger"} className="payment-status-badge">
                           {paymentStatus === "paid" ? "✓ Đã thanh toán" : paymentStatus === "pending" ? "⏳ Đang chờ thanh toán" : "✗ Đơn hàng hủy"}
                         </Badge>
                       </div>
                       
                       {/* Countdown timer */}
                       {timeLeft > 0 && (
-                        <div style={{
-                          marginTop: '1.5rem',
-                          textAlign: 'center',
-                          color: '#666',
-                          fontSize: '0.9rem'
-                        }}>
-                          Thời gian còn lại: <strong style={{ color: '#FB6376' }}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
+                        <div className="countdown-timer">
+                          Thời gian còn lại: <strong>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
                         </div>
                       )}
                     </div>
@@ -1698,22 +1091,7 @@ export default function Checkout() {
       {/* Modal chọn địa chỉ */}
       {showAddressModal && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '1rem',
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(5px)',
-            animation: 'fadeIn 0.3s ease-out',
-            overflow: 'auto'
-          }}
+          className="address-modal-overlay"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowAddressModal(false);
@@ -1721,84 +1099,29 @@ export default function Checkout() {
           }}
         >
           <Card
-            style={{
-              position: 'relative',
-              zIndex: 10000,
-              borderRadius: '20px',
-              border: 'none',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 236, 0.95))',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              maxWidth: '600px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              animation: 'scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-            }}
+            className="address-modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <Card.Header style={{
-              background: 'transparent',
-              borderBottom: '2px solid rgba(251, 99, 118, 0.1)',
-              padding: '1.5rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                color: '#5D2A42',
-                margin: 0,
-                fontWeight: 700,
-                fontSize: '1.5rem'
-              }}>
+            <Card.Header className="address-modal-header">
+              <h3 className="address-modal-title">
                 Địa Chỉ Của Tôi
               </h3>
               <button
                 onClick={() => setShowAddressModal(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  color: '#666',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '50%',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(251, 99, 118, 0.1)';
-                  e.currentTarget.style.color = '#FB6376';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#666';
-                }}
+                className="address-modal-close"
               >
                 ×
               </button>
             </Card.Header>
 
-            <Card.Body style={{
-              padding: '1.5rem',
-              overflowY: 'auto',
-              flex: 1
-            }}>
+            <Card.Body className="address-modal-body">
               {loadingAddresses ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '3rem',
-                  color: '#666'
-                }}>
+                <div className="address-loading-text">
                   Đang tải địa chỉ...
                 </div>
               ) : addresses.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '3rem',
-                  color: '#666'
-                }}>
-                  <p style={{ marginBottom: '1.5rem' }}>Chưa có địa chỉ nào</p>
+                <div className="address-empty-container">
+                  <p className="mb-3">Chưa có địa chỉ nào</p>
                   <Button
                     className="btn-book"
                     onClick={() => {
@@ -1806,96 +1129,38 @@ export default function Checkout() {
                       navigate('/add-address', { state: { returnTo: '/checkout' } });
                     }}
                   >
-                    <FaPlus style={{ marginRight: '0.5rem' }} />
+                    <FaPlus className="me-2" />
                     Thêm Địa Chỉ Mới
                   </Button>
                 </div>
               ) : (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem'
-                }}>
+                <div className="address-list-container">
                   {addresses.map((address) => (
                     <div
                       key={address.address_id || address.id}
                       onClick={() => selectAddress(address)}
-                      style={{
-                        padding: '1.25rem',
-                        border: selectedAddress?.address_id === address.address_id || selectedAddress?.id === address.id
-                          ? '2px solid #FB6376'
-                          : '2px solid rgba(251, 99, 118, 0.2)',
-                        borderRadius: '12px',
-                        background: selectedAddress?.address_id === address.address_id || selectedAddress?.id === address.id
-                          ? 'rgba(251, 99, 118, 0.05)'
-                          : 'rgba(255, 255, 255, 0.7)',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        position: 'relative'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedAddress?.address_id !== address.address_id && selectedAddress?.id !== address.id) {
-                          e.currentTarget.style.borderColor = 'rgba(251, 99, 118, 0.4)';
-                          e.currentTarget.style.background = 'rgba(251, 99, 118, 0.08)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedAddress?.address_id !== address.address_id && selectedAddress?.id !== address.id) {
-                          e.currentTarget.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
-                        }
-                      }}
+                      className={`address-item ${selectedAddress?.address_id === address.address_id || selectedAddress?.id === address.id ? 'selected' : ''}`}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '1rem'
-                      }}>
+                      <div className="address-item-content">
                         <input
                           type="radio"
                           name="selectedAddress"
                           checked={selectedAddress?.address_id === address.address_id || selectedAddress?.id === address.id}
                           onChange={() => selectAddress(address)}
-                          style={{
-                            marginTop: '0.25rem',
-                            cursor: 'pointer'
-                          }}
+                          className="address-item-radio"
                         />
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            marginBottom: '0.5rem',
-                            flexWrap: 'wrap',
-                            gap: '0.5rem'
-                          }}>
-                            <div style={{
-                              fontWeight: 600,
-                              color: '#5D2A42',
-                              fontSize: '1rem'
-                            }}>
+                        <div className="address-item-details">
+                          <div className="address-item-header">
+                            <div className="address-item-name">
                               {user?.name || customerName || "Người nhận"}
                             </div>
                             {address.is_default && (
-                              <span style={{
-                                padding: '0.25rem 0.75rem',
-                                borderRadius: '4px',
-                                border: '1px solid #FF9800',
-                                color: '#FF9800',
-                                fontSize: '0.85rem',
-                                fontWeight: 500
-                              }}>
+                              <span className="default-badge">
                                 Mặc Định
                               </span>
                             )}
                           </div>
-                          <div style={{
-                            color: '#666',
-                            fontSize: '0.95rem',
-                            lineHeight: '1.6',
-                            marginBottom: '0.5rem'
-                          }}>
+                          <div className="address-item-text">
                             {formatAddress(address)}
                           </div>
                         </div>
@@ -1906,41 +1171,22 @@ export default function Checkout() {
               )}
             </Card.Body>
 
-            <Card.Footer style={{
-              background: 'transparent',
-              borderTop: '2px solid rgba(251, 99, 118, 0.1)',
-              padding: '1.5rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: '1rem'
-            }}>
+            <Card.Footer className="address-modal-footer">
               <Button
                 variant="outline-secondary"
                 onClick={() => setShowAddressModal(false)}
-                style={{
-                  borderRadius: '8px',
-                  padding: '0.75rem 1.5rem',
-                  borderColor: '#5D2A42',
-                  color: '#5D2A42'
-                }}
+                className="address-modal-cancel-button"
               >
                 Hủy
               </Button>
               <Button
-                className="btn-book"
+                className="btn-book address-modal-add-button"
                 onClick={() => {
                   setShowAddressModal(false);
                   navigate('/add-address', { state: { returnTo: '/checkout' } });
                 }}
-                style={{
-                  borderRadius: '8px',
-                  padding: '0.75rem 1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
               >
-                <FaPlus />
+                <FaPlus className="me-2" />
                 Thêm Địa Chỉ Mới
               </Button>
             </Card.Footer>
