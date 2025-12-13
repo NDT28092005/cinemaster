@@ -370,6 +370,58 @@ export default function OrderDetail() {
                   </div>
                 )}
 
+                {/* Tùy chọn quà tặng */}
+                {(order.wrapping_paper || order.decorative_accessories || order.card_type || order.card_note) && (
+                  <>
+                    <hr />
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      background: 'rgba(251, 99, 118, 0.05)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(251, 99, 118, 0.2)'
+                    }}>
+                      <strong style={{ color: '#5D2A42', fontSize: '1rem', marginBottom: '0.75rem', display: 'block' }}>
+                        Tùy chọn quà tặng
+                      </strong>
+                      {order.wrapping_paper && (
+                        <div className="info-item" style={{ marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Giấy gói:</strong>
+                          <div style={{ fontSize: '0.9rem', color: '#666' }}>{order.wrapping_paper}</div>
+                        </div>
+                      )}
+                      {order.decorative_accessories && (
+                        <div className="info-item" style={{ marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Phụ kiện trang trí:</strong>
+                          <div style={{ fontSize: '0.9rem', color: '#666' }}>{order.decorative_accessories}</div>
+                        </div>
+                      )}
+                      {order.card_type && (
+                        <div className="info-item" style={{ marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Loại thiệp:</strong>
+                          <div style={{ fontSize: '0.9rem', color: '#666' }}>{order.card_type}</div>
+                        </div>
+                      )}
+                      {order.card_note && (
+                        <div className="info-item" style={{ marginBottom: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Ghi chú cho thiệp:</strong>
+                          <div style={{ 
+                            fontSize: '0.9rem', 
+                            color: '#666', 
+                            marginTop: '0.25rem',
+                            padding: '0.5rem',
+                            background: 'rgba(255, 255, 255, 0.7)',
+                            borderRadius: '5px',
+                            fontStyle: 'italic'
+                          }}>
+                            {order.card_note}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <hr />
 
                 <div className="order-summary">

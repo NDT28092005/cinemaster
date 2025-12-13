@@ -35,6 +35,7 @@ const AdminLayout = ({ children }) => {
     { icon: Gift, label: 'Dịp lễ', path: '/admin/occasions' },
     { icon: Star, label: 'Đánh giá', path: '/admin/reviews' },
     { icon: ShoppingCart, label: 'Đơn hàng', path: '/admin/orders' },
+    { icon: Gift, label: 'Quà tặng', path: '/admin/gift-options' },
   ];
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');

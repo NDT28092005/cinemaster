@@ -15,7 +15,8 @@ import {
   FaLock,
   FaHome,
   FaHeart,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaStar
 } from 'react-icons/fa';
 
 export default function Profile() {
@@ -295,6 +296,42 @@ export default function Profile() {
               ) : (
                 <div className="field-value">{formData.phone || 'Chưa cập nhật'}</div>
               )}
+            </div>
+
+            {/* Điểm thưởng */}
+            <div className="profile-field">
+              <label>
+                <FaStar className="field-icon" style={{ color: '#FFD700' }} />
+                Điểm thưởng
+              </label>
+              <div style={{
+                padding: '1rem',
+                background: 'linear-gradient(135deg, rgba(251, 99, 118, 0.1), rgba(252, 177, 166, 0.1))',
+                borderRadius: '12px',
+                border: '2px solid rgba(251, 99, 118, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #FB6376, #FCB1A6)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  {user.loyalty_points || 0}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.25rem' }}>
+                    <strong style={{ color: '#5D2A42' }}>Điểm hiện có</strong>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#999' }}>
+                    1 điểm = 100đ giảm giá • Tích điểm: 10,000đ = 1 điểm
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="profile-actions">

@@ -45,6 +45,7 @@ import AdminPromotions from './components/admin/pages/AdminPromotions';
 import AdminEditPromotion from './components/admin/pages/AdminEditPromotion';
 import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
 import AdminReferral from './components/admin/pages/AdminReferral';
+import AdminGiftOptions from './components/admin/pages/AdminGiftOptions';
 import FloatingProductChatButton from './components/Chat/FloatingProductChatButton';
 
 function App() {
@@ -119,7 +120,7 @@ function App() {
           <Route path="/admin/products/edit/:id" element={<AdminEditProduct />} />
           <Route path="/admin/reviews" element={<AdminReview />} />
           <Route path="/admin/orders" element={<AdminOrder />} />
-
+          <Route path="/admin/gift-options" element={<AdminGiftOptions />} />
 
           <Route path="/admin/promotions" element={<AdminPromotions />} />
           <Route path="/admin/promotions/edit/:id" element={<AdminEditPromotion />} />

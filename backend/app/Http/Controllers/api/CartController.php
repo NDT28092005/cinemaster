@@ -144,15 +144,85 @@ class CartController extends Controller
             'customer_province' => 'nullable|string|max:255',
             'customer_district' => 'nullable|string|max:255',
             'customer_ward'    => 'nullable|string|max:255',
+            'wrapping_paper_id' => 'nullable|exists:wrapping_papers,id',
+            'wrapping_paper'   => 'nullable|string|max:255',
+            'decorative_accessory_id' => 'nullable|exists:decorative_accessories,id',
+            'decorative_accessories' => 'nullable|string|max:255',
+            'card_type_id'     => 'nullable|exists:card_types,id',
+            'card_type'        => 'nullable|string|max:255',
+            'card_note'        => 'nullable|string|max:1000',
+            'loyalty_points_used' => 'nullable|integer|min:0',
         ]);
 
         $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
         if ($cartItems->isEmpty()) return response()->json(['message' => 'Giỏ hàng trống'], 400);
 
         $total = $cartItems->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity);
-
+        
+        // Xử lý sử dụng điểm thưởng (1 điểm = 100 VND)
+        $loyaltyPointsUsed = $validated['loyalty_points_used'] ?? 0;
+        $discountAmount = 0;
+        
         DB::beginTransaction();
         try {
+            if ($loyaltyPointsUsed > 0) {
+                // Lấy lại user với điểm mới nhất trong transaction
+                $user = \App\Models\User::lockForUpdate()->find($user->id);
+                $availablePoints = $user->loyalty_points ?? 0;
+                
+                if ($loyaltyPointsUsed > $availablePoints) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Bạn không đủ điểm thưởng. Điểm hiện có: ' . $availablePoints
+                    ], 400);
+                }
+                
+                // Tính số tiền giảm (1 điểm = 100 VND)
+                $discountAmount = $loyaltyPointsUsed * 100;
+                
+                // Đảm bảo không giảm quá tổng tiền
+                if ($discountAmount > $total) {
+                    $discountAmount = $total;
+                    $loyaltyPointsUsed = (int) ceil($total / 100);
+                }
+                
+                // Trừ điểm từ user trong transaction
+                $user->decrement('loyalty_points', $loyaltyPointsUsed);
+            }
+            
+            // Tính tổng tiền sau khi giảm
+            $finalTotal = max(0, $total - $discountAmount);
+            // Trừ số lượng quà tặng nếu có
+            if (isset($validated['wrapping_paper_id']) && $validated['wrapping_paper_id']) {
+                $wrappingPaper = \App\Models\WrappingPaper::lockForUpdate()->find($validated['wrapping_paper_id']);
+                if ($wrappingPaper && $wrappingPaper->quantity > 0) {
+                    $wrappingPaper->decrement('quantity');
+                } else {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Giấy gói đã hết hàng'], 400);
+                }
+            }
+
+            if (isset($validated['decorative_accessory_id']) && $validated['decorative_accessory_id']) {
+                $accessory = \App\Models\DecorativeAccessory::lockForUpdate()->find($validated['decorative_accessory_id']);
+                if ($accessory && $accessory->quantity > 0) {
+                    $accessory->decrement('quantity');
+                } else {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Phụ kiện đã hết hàng'], 400);
+                }
+            }
+
+            if (isset($validated['card_type_id']) && $validated['card_type_id']) {
+                $cardType = \App\Models\CardType::lockForUpdate()->find($validated['card_type_id']);
+                if ($cardType && $cardType->quantity > 0) {
+                    $cardType->decrement('quantity');
+                } else {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Loại thiệp đã hết hàng'], 400);
+                }
+            }
+
             $order = Order::create([
                 'user_id'           => $user->id,
                 'delivery_address'  => $validated['delivery_address'],
@@ -161,7 +231,15 @@ class CartController extends Controller
                 'customer_province' => $validated['customer_province'] ?? null,
                 'customer_district' => $validated['customer_district'] ?? null,
                 'customer_ward'     => $validated['customer_ward'] ?? null,
-                'total_amount'      => $total,
+                'wrapping_paper_id' => $validated['wrapping_paper_id'] ?? null,
+                'wrapping_paper'    => $validated['wrapping_paper'] ?? null,
+                'decorative_accessory_id' => $validated['decorative_accessory_id'] ?? null,
+                'decorative_accessories' => $validated['decorative_accessories'] ?? null,
+                'card_type_id'      => $validated['card_type_id'] ?? null,
+                'card_type'         => $validated['card_type'] ?? null,
+                'card_note'         => $validated['card_note'] ?? null,
+                'total_amount'      => $finalTotal,
+                'loyalty_points_used' => $loyaltyPointsUsed,
                 'status'            => 'pending',
                 'expires_at'        => now()->addMinutes(5), // hết hạn 5 phút
             ]);
@@ -188,19 +266,25 @@ class CartController extends Controller
         $bankCode = "ACB";
         $accountNo = "22751921";
         $accountName = "NGUYEN DAI TUNG";
-        $amountInt = intval($total);
+        $amountInt = intval($finalTotal);
         $randomSuffix = strtoupper(Str::random(6));
         $addInfo = "Order{$order->id}{$randomSuffix}";
         $qrUrl = "https://img.vietqr.io/image/{$bankCode}-{$accountNo}-compact2.png"
             . "?amount={$amountInt}&addInfo=" . urlencode($addInfo)
             . "&accountName=" . urlencode($accountName);
 
+        // Lấy lại user để trả về điểm mới nhất
+        $user->refresh();
+        
         return response()->json([
             'message'  => 'Tạo mã thanh toán thành công',
             'order_id' => $order->id,
             'amount'   => $amountInt,
             'addInfo'  => $addInfo,
             'qr_code'  => $qrUrl,
+            'loyalty_points_used' => $loyaltyPointsUsed,
+            'discount_amount' => $discountAmount,
+            'remaining_loyalty_points' => $user->loyalty_points ?? 0,
         ]);
     }
 

@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import { useNavigate, Link } from "react-router-dom";
 import Dropdown from 'react-bootstrap/Dropdown';
-import { FaSearch, FaUser, FaSignInAlt, FaShoppingCart, FaShoppingBag } from "react-icons/fa";
+import { FaSearch, FaUser, FaSignInAlt, FaShoppingCart, FaShoppingBag, FaStar } from "react-icons/fa";
 import { AuthContext } from '../../context/AuthContext.js';
 import { getCategories } from '../../api/category';
 import { getOccasions } from '../../api/occasion';
@@ -356,6 +356,23 @@ const Header = () => {
                                                 <Dropdown.Item as="div" className="user-info">
                                                     <div className="user-name">{user.name || user.email}</div>
                                                     <div className="user-email">{user.email}</div>
+                                                    {user.loyalty_points !== undefined && (
+                                                        <div style={{
+                                                            marginTop: '0.5rem',
+                                                            padding: '0.5rem',
+                                                            background: 'linear-gradient(135deg, rgba(251, 99, 118, 0.1), rgba(252, 177, 166, 0.1))',
+                                                            borderRadius: '8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 600,
+                                                            color: '#FB6376'
+                                                        }}>
+                                                            <FaStar style={{ fontSize: '1rem' }} />
+                                                            <span>Điểm thưởng: <strong>{user.loyalty_points || 0}</strong> điểm</span>
+                                                        </div>
+                                                    )}
                                                 </Dropdown.Item>
                                                 <Dropdown.Divider />
                                                 <Dropdown.Item 

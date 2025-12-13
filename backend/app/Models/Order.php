@@ -22,7 +22,15 @@ class Order extends Model
         'customer_district',
         'customer_ward',
         'cancelled_at',
-        'cancellation_reason'
+        'cancellation_reason',
+        'wrapping_paper_id',
+        'wrapping_paper',
+        'decorative_accessory_id',
+        'decorative_accessories',
+        'card_type_id',
+        'card_type',
+        'card_note',
+        'loyalty_points_used'
     ];
 
     protected $casts = [
