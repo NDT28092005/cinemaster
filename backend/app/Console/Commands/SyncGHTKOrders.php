@@ -13,11 +13,14 @@ class SyncGHTKOrders extends Command
 
     public function handle(GHTKService $ghtk)
     {
-        $orders = GhtkOrder::whereNotIn('status', ['delivered','cancelled','returned'])->get();
+        $orders = GhtkOrder::whereNotIn('status', [
+            'delivered','cancelled','returned'
+        ])->get();
 
         foreach ($orders as $item) {
             $newStatus = $ghtk->syncOrderStatus($item);
-            $this->info("Updated {$item->label_id} → {$newStatus}");
+            $this->info("[{$item->label_id}] → {$newStatus}");
         }
     }
 }
+

@@ -81,7 +81,7 @@ class GHTKService
         if ($order->pick_address_id) {
             $orderPayload["pick_address_id"] = $order->pick_address_id;
         } else {
-            $orderPayload["pick_name"]     = "Kho sách NDTiny";
+            $orderPayload["pick_name"]     = "Kho sách BookGift";
             $orderPayload["pick_address"]  = "1312, Phường 1, Bình Thạnh, TP.HCM";
             $orderPayload["pick_province"] = "TP Hồ Chí Minh";
             $orderPayload["pick_district"] = "Bình Thạnh";
@@ -161,7 +161,7 @@ class GHTKService
 
     public function getOrderStatus($trackingCode)
     {
-        $url = "https://services.ghtk.vn/services/shipment/v2/" . $trackingCode;
+        $url = "https://services.giaohangtietkiem.vn/services/shipment/v2/" . $trackingCode;
 
         $response = Http::withHeaders([
             "Token" => $this->token,
@@ -173,57 +173,56 @@ class GHTKService
     public function syncOrderStatus(GhtkOrder $ghtkOrder)
     {
         if (!$ghtkOrder->label_id) {
-            return;
+            return "no_label";
         }
 
         $data = $this->getOrderStatus($ghtkOrder->label_id);
 
         if (!($data["success"] ?? false)) {
-            \Log::warning("GHTK sync failed: " . json_encode($data));
-            return;
+            \Log::warning("GHTK sync failed", $data);
+            return "failed";
         }
 
         $orderInfo = $data["order"];
 
-        // Map trạng thái GHTK → trạng thái của bạn
         $map = [
-            "1"   => "created",
-            "2"   => "picking",
-            "3"   => "delivering",
-            "4"   => "delivered",
-            "5"   => "returned",
-            "-1"  => "cancelled",
-            "-2"  => "lost",
+            "1"  => "created",
+            "2"  => "picking",
+            "3"  => "delivering",
+            "4"  => "delivered",
+            "5"  => "returned",
+            "-1" => "cancelled",
+            "-2" => "lost",
         ];
 
         $newStatus = $map[$orderInfo["status"]] ?? "unknown";
 
-        // Update bảng ghtk_orders
+        // 👉 Cập nhật ghtk_orders
         $ghtkOrder->update([
             "status"   => $newStatus,
             "response" => json_encode($data),
         ]);
 
-        // Update bảng orders (nếu cần)
+        // 👉 Cập nhật bảng orders
+        $order = $ghtkOrder->order()->with('items.product')->first();
+
+        if (!$order) return $newStatus;
+
         if ($newStatus === "delivered") {
-            $ghtkOrder->order->update([
-                "status" => "completed",
+            $order->update([
+                "status" => "completed"
             ]);
         }
 
-        if ($newStatus === "cancelled" || $newStatus === "returned") {
-            $order = $ghtkOrder->order()->with('items.product')->first();
-
-            if (!$order) {
-                return $newStatus;
-            }
+        if (in_array($newStatus, ["cancelled", "returned"])) {
 
             DB::beginTransaction();
-            try {
-                // 📦 Cộng lại tồn kho nếu đơn hàng đã được thanh toán
-                $shouldRestoreStock = in_array($order->status, ['paid', 'processing']);
 
-                if ($shouldRestoreStock && $order->items) {
+            try {
+                // ⚡ Nếu đơn đã thu tiền hoặc đã xử lý → cộng lại kho
+                $shouldRestoreStock = in_array($order->status, ['paid', 'processing', 'shipping']);
+
+                if ($shouldRestoreStock) {
                     foreach ($order->items as $item) {
                         $product = Product::lockForUpdate()->find($item->product_id);
                         if ($product) {
@@ -232,16 +231,14 @@ class GHTKService
                     }
                 }
 
-                $order->update([
-                    "status" => "cancelled",
-                ]);
+                $order->update(["status" => "cancelled"]);
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                \Log::error('Error cancelling order from GHTK', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage()
+                \Log::error("GHTK restore stock FAILED", [
+                    "order_id" => $order->id,
+                    "error" => $e->getMessage()
                 ]);
             }
         }

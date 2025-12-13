@@ -329,10 +329,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * 🧨 Khách hàng chủ động hủy đơn
-     */
     public function cancel(Request $request, $orderId)
     {
         $user = $request->user();
