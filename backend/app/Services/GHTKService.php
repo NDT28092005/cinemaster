@@ -54,7 +54,32 @@ class GHTKService
         $this->fixAddress($province, $district, $ward);
 
         // ============================================
-        // 4. Tạo ORDER payload
+        // 4. Tính pick_money dựa trên payment_method
+        // ============================================
+        // Nếu COD (thanh toán khi nhận hàng) → pick_money = tổng tiền
+        // Nếu bank_transfer hoặc momo (đã thanh toán) → pick_money = 0
+        $pickMoney = 0;
+        $totalOrderAmount = $order->total_amount + ($order->shipping_fee ?? 0);
+        
+        if ($order->payment_method === 'cod') {
+            // COD: GHTK sẽ thu tiền khi giao hàng
+            $pickMoney = (int) $totalOrderAmount;
+        } else {
+            // bank_transfer, momo: Đã thanh toán trước → GHTK không thu tiền
+            $pickMoney = 0;
+        }
+
+        \Log::info("GHTK pick_money calculation", [
+            'order_id' => $order->id,
+            'payment_method' => $order->payment_method,
+            'total_amount' => $order->total_amount,
+            'shipping_fee' => $order->shipping_fee ?? 0,
+            'total_order_amount' => $totalOrderAmount,
+            'pick_money' => $pickMoney
+        ]);
+
+        // ============================================
+        // 5. Tạo ORDER payload
         // ============================================
         $orderPayload = [
             "id"            => "ORDER_" . $order->id,
@@ -63,7 +88,7 @@ class GHTKService
             "weight_option" => "gram",
             "transport"      => "road",
             "deliver_option" => "none",
-            "pick_money"     => (int) $order->total_amount,
+            "pick_money"     => $pickMoney,
             "value"          => (int) $order->total_amount,
             "tel"            => $order->customer_phone ?? "0905123456",
             "name"           => $order->customer_name ?? "Khách hàng",
@@ -76,7 +101,7 @@ class GHTKService
         ];
 
         // ============================================
-        // 5. Pick address
+        // 6. Pick address
         // ============================================
         if ($order->pick_address_id) {
             $orderPayload["pick_address_id"] = $order->pick_address_id;
@@ -92,12 +117,12 @@ class GHTKService
         $payload["order"] = $orderPayload;
 
         // ============================================
-        // 6. Log payload
+        // 7. Log payload
         // ============================================
         \Log::info("GHTK PAYLOAD FINAL => " . json_encode($payload, JSON_UNESCAPED_UNICODE));
 
         // ============================================
-        // 7. Gửi API
+        // 8. Gửi API
         // ============================================
         $response = Http::withHeaders([
             "Token" => $this->token,
@@ -108,22 +133,50 @@ class GHTKService
         \Log::info("GHTK RESPONSE => " . json_encode($data, JSON_UNESCAPED_UNICODE));
 
         // ============================================
-        // 8. Lưu vào database
+        // 9. Lưu vào database
         // ============================================
         if ($response->successful() && ($data["success"] ?? false)) {
-            return GhtkOrder::create([
+            // Lấy label_id từ response - có thể ở nhiều vị trí khác nhau
+            $labelId = $data["order"]["label"] 
+                    ?? $data["order"]["label_id"] 
+                    ?? $data["label"] 
+                    ?? null;
+            
+            $orderCode = $data["order"]["order_code"] ?? null;
+            $fee = $data["order"]["fee"] ?? null;
+            $trackingUrl = $data["order"]["url"] ?? null;
+            
+            \Log::info("GHTK Order created", [
+                'order_id' => $order->id,
+                'label_id' => $labelId,
+                'order_code' => $orderCode,
+                'response_structure' => array_keys($data["order"] ?? [])
+            ]);
+            
+            $ghtkOrder = GhtkOrder::create([
                 "order_id"     => $order->id,
-                "order_code"   => $data["order"]["order_code"] ?? null,
-                "label_id"     => $data["order"]["label"] ?? null,
-                "fee"          => $data["order"]["fee"] ?? null,
-                "tracking_url" => $data["order"]["url"] ?? null,
+                "order_code"   => $orderCode,
+                "label_id"     => $labelId,
+                "fee"          => $fee,
+                "tracking_url" => $trackingUrl,
                 "response"     => json_encode($data),
                 "status"       => "created",
             ]);
+            
+            // Nếu có label_id, cập nhật ngay vào order
+            if ($labelId) {
+                $order->update(['tracking_code' => $labelId]);
+                \Log::info("Updated tracking_code immediately after GHTK creation", [
+                    'order_id' => $order->id,
+                    'tracking_code' => $labelId
+                ]);
+            }
+            
+            return $ghtkOrder;
         }
 
         // ============================================
-        // 9. Throw lỗi rõ ràng
+        // 10. Throw lỗi rõ ràng
         // ============================================
         throw new \Exception(
             "GHTK API error: " . json_encode($data, JSON_UNESCAPED_UNICODE)
@@ -170,6 +223,51 @@ class GHTKService
 
         return $response->json();
     }
+    public function getLabelPdf(
+        string $trackingCode,
+        string $pageSize = 'A6',
+        string $original = 'portrait'
+    ) {
+        // URL đúng theo API GHTK: GET /services/label/{TRACKING_ORDER}
+        $labelUrl = "https://services.giaohangtietkiem.vn/services/label/{$trackingCode}";
+        
+        $response = Http::withHeaders([
+            'Token' => config('services.ghtk.token'),
+            'X-Client-Source' => config('services.ghtk.client_source', ''),
+        ])->get(
+            $labelUrl,
+            [
+                'page_size' => $pageSize,
+                'original' => $original,
+            ]
+        );
+
+        // ❌ Lỗi GHTK trả JSON
+        if (!$response->successful()) {
+            $errorData = $response->json();
+            return response()->json([
+                'success' => false,
+                'message' => $errorData['message'] ?? 'Không thể in nhãn'
+            ], 400);
+        }
+
+        // Kiểm tra nếu response là JSON (lỗi từ GHTK)
+        $contentType = $response->header('Content-Type', '');
+        if (str_contains($contentType, 'application/json')) {
+            $errorData = $response->json();
+            return response()->json([
+                'success' => false,
+                'message' => $errorData['message'] ?? 'Không thể in nhãn'
+            ], 400);
+        }
+
+        // ✅ Trả file PDF
+        return response($response->body(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="ghtk-label-' . $trackingCode . '.pdf"',
+            'Content-Transfer-Encoding' => 'binary',
+        ]);
+    }
     public function syncOrderStatus(GhtkOrder $ghtkOrder)
     {
         if (!$ghtkOrder->label_id) {
@@ -207,6 +305,12 @@ class GHTKService
         $order = $ghtkOrder->order()->with('items.product')->first();
 
         if (!$order) return $newStatus;
+
+        // Sync tracking_code từ label_id nếu chưa có
+        if (!$order->tracking_code && $ghtkOrder->label_id) {
+            $order->update(['tracking_code' => $ghtkOrder->label_id]);
+            \Log::info("✅ Synced tracking_code in syncOrderStatus for order {$order->id}: {$ghtkOrder->label_id}");
+        }
 
         if ($newStatus === "delivered") {
             $order->update([

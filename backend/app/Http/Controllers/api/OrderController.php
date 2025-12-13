@@ -14,46 +14,6 @@ class OrderController extends Controller
     /**
      * 🧾 Danh sách đơn hàng
      */
-    public function calcShipping(Request $request)
-    {
-        $client = new \GuzzleHttp\Client();
-
-        $params = [
-            "address"       => $request->address ?? "",
-            "province"      => $request->province,
-            "district"      => $request->district,
-            "ward"          => $request->ward ?? "",
-            "weight"        => $request->weight ?? 500, // gram
-            "value"         => $request->value ?? 0,
-
-            // Thông tin nơi lấy hàng
-            "pick_province" => "Bình Dương",
-            "pick_district" => "Dĩ An",
-            "pick_ward"     => "Đông Hòa",
-            "pick_street"   => "Ký túc xá Khu B",
-            "pick_tel"      => "0946403788",
-        ];
-
-        $response = $client->get("https://services.ghtk.vn/services/shipment/fee", [
-            "headers" => [
-                "Token" => env("GHTK_TOKEN"),
-            ],
-            "query" => $params
-        ]);
-
-        $data = json_decode($response->getBody(), true);
-
-        if (!$data["success"]) {
-            return response()->json(["error" => "Không tính được phí"], 400);
-        }
-
-        return response()->json([
-            "name" => $data["fee"]["name"],
-            "shipping_fee" => $data["fee"]["fee"],
-            "insurance_fee" => $data["fee"]["insurance_fee"],
-            "delivery" => $data["fee"]["delivery"],
-        ]);
-    }
     public function index(Request $request)
     {
         $orders = Order::with(['user', 'items.product.images'])
@@ -77,6 +37,7 @@ class OrderController extends Controller
             'customer_district'  => 'required|string|max:100',
             'customer_ward'      => 'required|string|max:100',
             'shipping_fee'       => 'required|numeric|min:0',
+            'print_label'        => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -106,6 +67,7 @@ class OrderController extends Controller
             'customer_district'  => $request->customer_district,
             'customer_ward'      => $request->customer_ward,
             'expires_at'         => now()->addMinutes(5),
+            'print_label'        => $request->boolean('print_label'),
         ]);
 
         // Thêm order_items
@@ -132,7 +94,34 @@ class OrderController extends Controller
             'amount' => $order->total_amount + $order->shipping_fee,
         ]);
     }
+    public function printLabel($orderId, GHTKService $ghtkService)
+    {
+        $order = Order::findOrFail($orderId);
 
+        // 1️⃣ Chưa có mã vận đơn
+        if (!$order->tracking_code) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng chưa có mã vận đơn. Vui lòng đợi đơn hàng được xử lý.'
+            ], 400);
+        }
+
+        // 2️⃣ Kiểm tra print_label: nếu print_label = false thì không cho in
+        // Logic: print_label = true → cho phép in, print_label = false → không cho in
+        if ($order->print_label === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng này không yêu cầu in nhãn (phù hợp khi tặng quà)'
+            ], 400);
+        }
+
+        // 3️⃣ Gọi service lấy PDF
+        return $ghtkService->getLabelPdf(
+            $order->tracking_code,
+            request('page_size', 'A6'),
+            request('original', 'portrait')
+        );
+    }
     /**
      * ✅ Đánh dấu đã thanh toán
      */
@@ -163,16 +152,16 @@ class OrderController extends Controller
             }
 
             $order->update(['status' => 'paid']);
-            
+
             // Tích điểm thưởng: 10,000 VND = 1 điểm
             // Tính điểm dựa trên tổng tiền đơn hàng (total_amount + shipping_fee)
             $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
             $pointsEarned = (int) floor($orderTotal / 10000);
-            
+
             if ($pointsEarned > 0) {
                 $order->user->increment('loyalty_points', $pointsEarned);
             }
-            
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -185,17 +174,79 @@ class OrderController extends Controller
         // 🚚 Tạo vận đơn GHTK
         try {
             $ghtkOrder = $ghtkService->createShipment($order);
+            
+            // Refresh order và ghtkOrder để lấy dữ liệu mới nhất
+            $order->refresh();
+            if ($ghtkOrder) {
+                $ghtkOrder->refresh();
+                
+                // Lấy label_id từ ghtk_orders và cập nhật vào tracking_code của orders
+                if ($ghtkOrder->label_id) {
+                    $order->update(['tracking_code' => $ghtkOrder->label_id]);
+                    \Log::info("✅ Updated tracking_code for order {$order->id} from ghtk_orders.label_id: {$ghtkOrder->label_id}");
+                } else {
+                    // Nếu label_id chưa có, thử lấy từ response JSON
+                    $response = json_decode($ghtkOrder->response, true);
+                    $labelId = $response['order']['label'] ?? $response['order']['label_id'] ?? null;
+                    if ($labelId) {
+                        // Cập nhật cả ghtk_orders và orders
+                        $ghtkOrder->update(['label_id' => $labelId]);
+                        $order->update(['tracking_code' => $labelId]);
+                        \Log::info("✅ Updated tracking_code from response JSON for order {$order->id}: {$labelId}");
+                    } else {
+                        \Log::warning("⚠️ GHTK order created but label_id is null", [
+                            'order_id' => $order->id,
+                            'ghtk_order_id' => $ghtkOrder->id,
+                            'response_keys' => array_keys($response['order'] ?? [])
+                        ]);
+                    }
+                }
+            }
         } catch (\Exception $e) {
+            \Log::error("❌ GHTK shipment creation failed", [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
             return response()->json([
                 'message' => 'Thanh toán thành công nhưng tạo đơn GHTK thất bại',
                 'error' => $e->getMessage()
             ], 500);
         }
 
+        // Refresh lại order để có tracking_code mới nhất
+        $order->refresh();
+
         return response()->json([
             'message' => 'Thanh toán & tạo đơn GHTK thành công',
-            'order' => $order,
-            'ghtk_order' => $ghtkOrder
+            'order' => $order->fresh(['ghtkOrder']),
+            'ghtk_order' => $ghtkOrder,
+            'tracking_code' => $order->tracking_code
+        ]);
+    }
+
+    /**
+     * 🔄 Sync tracking_code từ ghtk_orders.label_id cho tất cả đơn hàng
+     */
+    public function syncTrackingCodes()
+    {
+        $orders = Order::whereNull('tracking_code')
+            ->whereHas('ghtkOrder', function($q) {
+                $q->whereNotNull('label_id');
+            })
+            ->with('ghtkOrder')
+            ->get();
+
+        $synced = 0;
+        foreach ($orders as $order) {
+            if ($order->syncTrackingCode()) {
+                $synced++;
+            }
+        }
+
+        return response()->json([
+            'message' => "Đã sync {$synced} đơn hàng",
+            'synced_count' => $synced,
+            'total_orders' => $orders->count()
         ]);
     }
 
@@ -205,8 +256,14 @@ class OrderController extends Controller
      */
     public function show($id)
     {
-        $order = Order::with(['user', 'items.product.images', 'payment'])
+        $order = Order::with(['user', 'items.product.images', 'payment', 'ghtkOrder'])
             ->findOrFail($id);
+
+        // Tự động sync tracking_code nếu chưa có nhưng có ghtkOrder với label_id
+        if (!$order->tracking_code && $order->ghtkOrder && $order->ghtkOrder->label_id) {
+            $order->syncTrackingCode();
+            $order->refresh();
+        }
 
         return response()->json($order);
     }
@@ -265,7 +322,7 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             // 📦 Xử lý tồn kho khi thay đổi trạng thái
-            
+
             // Trường hợp 1: pending → paid (thanh toán thành công) → Giảm tồn kho và tích điểm
             if ($oldStatus === 'pending' && $newStatus === 'paid') {
                 foreach ($order->items as $item) {
@@ -281,17 +338,17 @@ class OrderController extends Controller
                         $product->update(['stock_quantity' => $newStock]);
                     }
                 }
-                
+
                 // Tích điểm thưởng: 10,000 VND = 1 điểm
                 // Tính điểm dựa trên tổng tiền đơn hàng (total_amount + shipping_fee)
                 $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
                 $pointsEarned = (int) floor($orderTotal / 10000);
-                
+
                 if ($pointsEarned > 0) {
                     $order->user->increment('loyalty_points', $pointsEarned);
                 }
             }
-            
+
             // Trường hợp 2: paid/processing → cancelled → Cộng lại tồn kho và trừ điểm đã tích
             if (in_array($oldStatus, ['paid', 'processing']) && $newStatus === 'cancelled') {
                 foreach ($order->items as $item) {
@@ -300,11 +357,11 @@ class OrderController extends Controller
                         $product->increment('stock_quantity', $item->quantity);
                     }
                 }
-                
+
                 // Trừ điểm đã tích khi hủy đơn (nếu đã tích điểm)
                 $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
                 $pointsEarned = (int) floor($orderTotal / 10000);
-                
+
                 if ($pointsEarned > 0) {
                     $user = $order->user;
                     $currentPoints = $user->loyalty_points ?? 0;
@@ -314,7 +371,7 @@ class OrderController extends Controller
                     }
                 }
             }
-            
+
             // Trường hợp 3: cancelled → paid (khôi phục đơn hàng) → Giảm tồn kho lại và tích điểm
             if ($oldStatus === 'cancelled' && $newStatus === 'paid') {
                 foreach ($order->items as $item) {
@@ -330,11 +387,11 @@ class OrderController extends Controller
                         $product->update(['stock_quantity' => $newStock]);
                     }
                 }
-                
+
                 // Tích điểm thưởng: 10,000 VND = 1 điểm
                 $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
                 $pointsEarned = (int) floor($orderTotal / 10000);
-                
+
                 if ($pointsEarned > 0) {
                     $order->user->increment('loyalty_points', $pointsEarned);
                 }
@@ -342,7 +399,7 @@ class OrderController extends Controller
 
             // Cập nhật trạng thái đơn hàng
             $updateData = ['status' => $newStatus];
-            
+
             // Nếu hủy đơn, thêm thông tin hủy
             if ($newStatus === 'cancelled') {
                 $updateData['cancelled_at'] = now();
@@ -401,7 +458,7 @@ class OrderController extends Controller
         try {
             // 📦 Cộng lại tồn kho nếu đơn hàng đã được thanh toán (paid hoặc processing)
             $shouldRestoreStock = in_array($order->status, ['paid', 'processing']);
-            
+
             if ($shouldRestoreStock) {
                 foreach ($order->items as $item) {
                     $product = Product::lockForUpdate()->find($item->product_id);
@@ -409,11 +466,11 @@ class OrderController extends Controller
                         $product->increment('stock_quantity', $item->quantity);
                     }
                 }
-                
+
                 // Trừ điểm đã tích khi hủy đơn (nếu đã tích điểm)
                 $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
                 $pointsEarned = (int) floor($orderTotal / 10000);
-                
+
                 if ($pointsEarned > 0) {
                     $currentPoints = $user->loyalty_points ?? 0;
                     $pointsToDeduct = min($pointsEarned, $currentPoints);
@@ -422,7 +479,7 @@ class OrderController extends Controller
                     }
                 }
             }
-            
+
             // Hoàn lại điểm đã sử dụng nếu có
             if ($order->loyalty_points_used > 0) {
                 $user->increment('loyalty_points', $order->loyalty_points_used);
