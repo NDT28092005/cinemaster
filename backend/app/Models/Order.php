@@ -30,12 +30,16 @@ class Order extends Model
         'card_type_id',
         'card_type',
         'card_note',
-        'loyalty_points_used'
+        'loyalty_points_used',
+        'print_label',
+        'tracking_code',
+        'payment_method',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'print_label' => 'boolean',
     ];
 
     public function user()
@@ -51,5 +55,24 @@ class Order extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function ghtkOrder()
+    {
+        return $this->hasOne(GhtkOrder::class);
+    }
+
+    /**
+     * Sync tracking_code từ ghtk_orders.label_id
+     */
+    public function syncTrackingCode()
+    {
+        $ghtkOrder = $this->ghtkOrder;
+        if ($ghtkOrder && $ghtkOrder->label_id && !$this->tracking_code) {
+            $this->update(['tracking_code' => $ghtkOrder->label_id]);
+            \Log::info("Synced tracking_code for order {$this->id}: {$ghtkOrder->label_id}");
+            return true;
+        }
+        return false;
     }
 }

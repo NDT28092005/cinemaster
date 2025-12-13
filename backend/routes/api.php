@@ -25,7 +25,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PromotionUsageController;
 use App\Http\Controllers\Api\GiftOptionController;
-
+use App\Http\Controllers\Api\ShippingController;
 
 Route::middleware('auth:sanctum')->group(function () {
     // Product chatbot endpoints với auth
@@ -39,7 +39,9 @@ Route::post('/chat/product-advice', [ChatController::class, 'productAdvice']);
 Route::get('/ghtk/check/{label}', function($label, App\Services\GHTKService $ghtk) {
     return $ghtk->getOrderStatus($label);
 });
+Route::get('/orders/{order}/print-label', [OrderController::class, 'printLabel']);
 Route::post('/orders/mark-paid', [OrderController::class, 'markPaid']);
+Route::post('/orders/sync-tracking-codes', [OrderController::class, 'syncTrackingCodes']);
 // Route::post('/ghtk/webhook', [GHTKWebhookController::class, 'updateStatus']);
 // Promotions
 Route::apiResource('promotions', PromotionController::class);
@@ -157,6 +159,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index']);
 });
 Route::middleware('auth:sanctum')->get('/admin/me', [AdminAuthController::class, 'me']);
+
+// Shipping - Public endpoint (for checkout)
+Route::post('/shipping/calc', [ShippingController::class, 'calc']);
 
 // Gift Options - Public endpoints (for checkout)
 Route::get('/gift-options/wrapping-papers', [GiftOptionController::class, 'getWrappingPapers']);

@@ -152,6 +152,7 @@ class CartController extends Controller
             'card_type'        => 'nullable|string|max:255',
             'card_note'        => 'nullable|string|max:1000',
             'loyalty_points_used' => 'nullable|integer|min:0',
+            'print_label'      => 'nullable|boolean',
         ]);
 
         $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
@@ -223,6 +224,14 @@ class CartController extends Controller
                 }
             }
 
+            // Xử lý print_label: nhận từ request và convert sang boolean
+            $printLabel = false;
+            if (isset($validated['print_label'])) {
+                $printLabel = filter_var($validated['print_label'], FILTER_VALIDATE_BOOLEAN);
+            } elseif ($request->has('print_label')) {
+                $printLabel = $request->boolean('print_label');
+            }
+
             $order = Order::create([
                 'user_id'           => $user->id,
                 'delivery_address'  => $validated['delivery_address'],
@@ -240,6 +249,7 @@ class CartController extends Controller
                 'card_note'         => $validated['card_note'] ?? null,
                 'total_amount'      => $finalTotal,
                 'loyalty_points_used' => $loyaltyPointsUsed,
+                'print_label'       => $printLabel,
                 'status'            => 'pending',
                 'expires_at'        => now()->addMinutes(5), // hết hạn 5 phút
             ]);

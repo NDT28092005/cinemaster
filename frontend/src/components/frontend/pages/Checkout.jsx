@@ -54,7 +54,9 @@ export default function Checkout() {
   const [cardTypes, setCardTypes] = useState([]);
   const [loyaltyPointsUsed, setLoyaltyPointsUsed] = useState(0);
   const [availableLoyaltyPoints, setAvailableLoyaltyPoints] = useState(0);
-
+  const [printLabel, setPrintLabel] = useState(false);
+  const [shippingFee, setShippingFee] = useState(0);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -89,7 +91,7 @@ export default function Checkout() {
       setCart(res.data);
       setLoading(false);
       setError(null);
-      
+
       // Nếu giỏ hàng trống, chuyển về trang cart
       if (!res.data?.items || res.data.items.length === 0) {
         navigate("/cart");
@@ -108,6 +110,21 @@ export default function Checkout() {
     fetchUserLoyaltyPoints();
   }, [token, authLoading, navigate, location, user]);
 
+  // Tự động tính phí ship khi địa chỉ thay đổi (nếu đã có đủ thông tin)
+  useEffect(() => {
+    if (customerProvince && customerDistrict && deliveryAddress && cart?.items?.length > 0) {
+      // Debounce để tránh gọi API quá nhiều
+      const timer = setTimeout(() => {
+        calculateShippingFee(customerProvince, customerDistrict, customerWard, deliveryAddress);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else if (!customerProvince || !customerDistrict || !deliveryAddress) {
+      setShippingFee(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerProvince, customerDistrict, customerWard, deliveryAddress, cart?.items?.length]);
+
   // Cập nhật điểm từ user object khi user thay đổi
   useEffect(() => {
     if (user && user.loyalty_points !== undefined) {
@@ -115,7 +132,7 @@ export default function Checkout() {
       setAvailableLoyaltyPoints(user.loyalty_points || 0);
     }
   }, [user]);
-  
+
   // Lấy số điểm thưởng hiện có của user
   const fetchUserLoyaltyPoints = async () => {
     if (!user || !token) {
@@ -145,11 +162,11 @@ export default function Checkout() {
         axios.get('http://localhost:8000/api/gift-options/decorative-accessories'),
         axios.get('http://localhost:8000/api/gift-options/card-types')
       ]);
-      
+
       console.log('Wrapping papers:', papersRes.data);
       console.log('Accessories:', accessoriesRes.data);
       console.log('Card types:', cardsRes.data);
-      
+
       setWrappingPapers(papersRes.data || []);
       setDecorativeAccessoriesList(accessoriesRes.data || []);
       setCardTypes(cardsRes.data || []);
@@ -173,7 +190,7 @@ export default function Checkout() {
     if (authLoading || !user) return;
     const currentToken = token || localStorage.getItem("token");
     const userId = user?.id || localStorage.getItem("userId");
-    
+
     if (!currentToken || !userId) return;
 
     setLoadingAddresses(true);
@@ -183,7 +200,7 @@ export default function Checkout() {
         { headers: { Authorization: `Bearer ${currentToken}` } }
       );
       setAddresses(res.data || []);
-      
+
       // Tự động chọn địa chỉ mặc định
       const defaultAddress = res.data?.find(addr => addr.is_default) || res.data?.[0];
       if (defaultAddress) {
@@ -196,19 +213,68 @@ export default function Checkout() {
     }
   };
 
+  // Tính phí ship dựa trên địa chỉ
+  const calculateShippingFee = async (province, district, ward, address) => {
+    if (!province || !district || !address) {
+      setShippingFee(0);
+      return;
+    }
+
+    setCalculatingShipping(true);
+    try {
+      // Tính trọng lượng từ giỏ hàng
+      const totalWeight = cart?.items?.reduce((sum, item) => {
+        const itemWeight = item.product?.weight_in_gram || 200;
+        return sum + (itemWeight * item.quantity);
+      }, 0) || 500;
+
+      // Tính giá trị đơn hàng
+      const orderValue = cart?.total_amount || 0;
+
+      const res = await axios.post(
+        "http://localhost:8000/api/shipping/calc",
+        {
+          address: address,
+          province: province,
+          district: district,
+          ward: ward || "",
+          weight: totalWeight,
+          value: orderValue,
+        }
+      );
+
+      if (res.data?.shipping_fee) {
+        setShippingFee(res.data.shipping_fee);
+      } else {
+        setShippingFee(0);
+      }
+    } catch (error) {
+      console.error("Error calculating shipping fee:", error);
+      // Nếu lỗi, set về 0 (miễn phí)
+      setShippingFee(0);
+    } finally {
+      setCalculatingShipping(false);
+    }
+  };
+
   // Chọn địa chỉ và điền vào form
   const selectAddress = (address) => {
     setSelectedAddress(address);
     // Map địa chỉ từ UserAddress sang form checkout
-    setDeliveryAddress(
-      [address.address_line1, address.address_line2]
-        .filter(Boolean)
-        .join(", ")
-    );
-    setCustomerProvince(address.state || address.city || "");
-    setCustomerDistrict(address.city || "");
-    setCustomerWard("");
+    const fullAddress = [address.address_line1, address.address_line2]
+      .filter(Boolean)
+      .join(", ");
+    setDeliveryAddress(fullAddress);
+    const province = address.state || address.city || "";
+    const district = address.city || "";
+    const ward = "";
+    setCustomerProvince(province);
+    setCustomerDistrict(district);
+    setCustomerWard(ward);
     setShowAddressModal(false);
+    
+    // Tính phí ship khi chọn địa chỉ
+    calculateShippingFee(province, district, ward, fullAddress);
   };
 
   // Format địa chỉ để hiển thị
@@ -232,18 +298,18 @@ export default function Checkout() {
       navigate("/login");
       return;
     }
-    
+
     // Validation
     if (!deliveryAddress.trim()) {
       setError("Vui lòng nhập địa chỉ giao hàng");
       return;
     }
-    
+
     if (!paymentMethod) {
       setError("Vui lòng chọn phương thức thanh toán");
       return;
     }
-    
+
     if (!cart || !cart.items || cart.items.length === 0) {
       setError("Giỏ hàng trống. Vui lòng thêm sản phẩm vào giỏ hàng.");
       navigate("/cart");
@@ -259,7 +325,7 @@ export default function Checkout() {
         delivery_address: deliveryAddress.trim(),
         payment_method: paymentMethod,
       };
-      
+
       // Chỉ thêm các trường có giá trị
       if (customerName && customerName.trim()) {
         checkoutData.customer_name = customerName.trim();
@@ -291,36 +357,39 @@ export default function Checkout() {
       if (cardNote && cardNote.trim()) {
         checkoutData.card_note = cardNote.trim();
       }
-      
+      // Đảm bảo print_label luôn là boolean
+      checkoutData.print_label = Boolean(printLabel);
+      // Thêm phí vận chuyển
+      checkoutData.shipping_fee = Number(shippingFee) || 0;
       // Thêm điểm thưởng sử dụng
       if (loyaltyPointsUsed > 0) {
         checkoutData.loyalty_points_used = loyaltyPointsUsed;
       }
-      
+
       console.log("Sending checkout data:", checkoutData);
-      
+
       const res = await axios.post(
         "http://localhost:8000/api/cart/checkout",
         checkoutData,
-        { 
-          headers: { 
+        {
+          headers: {
             Authorization: `Bearer ${currentToken}`,
             'Content-Type': 'application/json'
-          } 
+          }
         }
       );
-      
+
       console.log("Checkout response:", res.data);
-      
+
       // Kiểm tra response có đầy đủ dữ liệu không
       if (!res.data) {
         throw new Error("Không nhận được dữ liệu từ server");
       }
-      
+
       if (!res.data.qr_code) {
         console.warn("QR code không có trong response:", res.data);
       }
-      
+
       setQrCode(res.data.qr_code || "");
       setAmount(Number(res.data.amount) || 0);
       setTransferContent(res.data.addInfo || "");
@@ -329,6 +398,11 @@ export default function Checkout() {
       setTimeLeft(5 * 60); // 5 phút countdown
       setSubmitting(false);
       
+      // Cập nhật shipping fee từ response nếu có
+      if (res.data.shipping_fee !== undefined) {
+        setShippingFee(res.data.shipping_fee);
+      }
+
       // Cập nhật lại số điểm sau khi sử dụng
       if (loyaltyPointsUsed > 0) {
         // Cập nhật từ response nếu có
@@ -350,7 +424,7 @@ export default function Checkout() {
       console.error("Checkout error:", err);
       console.error("Error response:", err.response?.data);
       console.error("Error status:", err.response?.status);
-      
+
       let errorMessage = "Lỗi khi thanh toán";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -359,7 +433,7 @@ export default function Checkout() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       // Hiển thị thông báo lỗi chi tiết hơn
       if (err.response?.status === 500) {
         const backendError = err.response?.data?.error || err.response?.data?.message;
@@ -376,7 +450,7 @@ export default function Checkout() {
       } else if (!err.response) {
         errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
       }
-      
+
       setError(errorMessage);
       setSubmitting(false);
     }
@@ -397,7 +471,7 @@ export default function Checkout() {
 
       if (description.includes(transferContent) && amountFromAPI >= amount) {
         const currentToken = token || localStorage.getItem("token");
-        
+
         // ✅ Gọi API markPaid để cập nhật trạng thái đơn hàng và giảm tồn kho
         if (orderId) {
           try {
@@ -422,7 +496,7 @@ export default function Checkout() {
         setPaymentStatus("paid");
         setPaymentMessage({ type: "success", text: "🎉 Thanh toán thành công!" });
         setCart({ items: [], total_amount: 0 });
-        
+
         // Cập nhật lại số điểm sau khi thanh toán (điểm mới được tích)
         await fetchUserLoyaltyPoints();
         // Refresh user trong AuthContext để cập nhật điểm ở header và profile
@@ -485,7 +559,7 @@ export default function Checkout() {
       }).then(() => {
         setPaymentStatus("cancelled");
         setPaymentMessage({ type: "error", text: "⏰ Hết thời gian thanh toán. Đơn hàng đã bị hủy." });
-        
+
         // Tự động đóng modal sau 3 giây
         setTimeout(() => {
           setQrCode("");
@@ -837,6 +911,28 @@ export default function Checkout() {
                         </Form.Select>
                       </Form.Group>
                     </Col>
+                    <Col xs={12}>
+                      <div className="gift-options-container">
+                        <h3 className="gift-options-title">
+                          Tùy chọn giao hàng
+                        </h3>
+
+                        <Form.Check
+                          type="switch"
+                          id="print-label-switch"
+                          label="In nhãn đơn hàng (có thể hiển thị giá)"
+                          checked={printLabel}
+                          onChange={(e) => setPrintLabel(e.target.checked)}
+                          className="mb-2"
+                        />
+
+                        {!printLabel && (
+                          <div className="text-muted small">
+                            🎁 Phù hợp khi tặng quà — đơn hàng sẽ <strong>không dán nhãn có giá</strong>
+                          </div>
+                        )}
+                      </div>
+                    </Col>
                   </Row>
                 </Form>
               </Card.Body>
@@ -942,7 +1038,13 @@ export default function Checkout() {
                   <div className="price-row price-row-shipping">
                     <span className="price-label">Phí vận chuyển:</span>
                     <span className="price-value">
-                      Miễn phí
+                      {calculatingShipping ? (
+                        <span className="text-muted">Đang tính...</span>
+                      ) : shippingFee > 0 ? (
+                        formatPrice(shippingFee)
+                      ) : (
+                        "Miễn phí"
+                      )}
                     </span>
                   </div>
                   <hr className="price-divider" />
@@ -951,7 +1053,7 @@ export default function Checkout() {
                       Tổng cộng:
                     </span>
                     <span className="price-total-value">
-                      {formatPrice(Math.max(0, (cart?.total_amount || 0) - (loyaltyPointsUsed * 100)))}
+                      {formatPrice(Math.max(0, (cart?.total_amount || 0) - (loyaltyPointsUsed * 100) + shippingFee))}
                     </span>
                   </div>
                 </div>
@@ -1000,7 +1102,7 @@ export default function Checkout() {
               >
                 {/* Backdrop với blur */}
                 <div className="qr-modal-backdrop" />
-                
+
                 {/* QR Code Modal */}
                 <Card
                   className="qr-modal-card"
@@ -1032,7 +1134,7 @@ export default function Checkout() {
                         <h3 className="qr-modal-title">
                           Quét mã VietQR để thanh toán
                         </h3>
-                        
+
                         {/* QR Code - To và rõ ràng, căn giữa hoàn hảo */}
                         <div className="qr-code-container">
                           <div className="qr-code-wrapper">
@@ -1049,35 +1151,35 @@ export default function Checkout() {
                     {/* Payment Info - Chỉ hiển thị khi chưa có thông báo */}
                     {!paymentMessage && (
                       <div className="payment-info-container">
-                      <div className="payment-info-section">
-                        <div className="payment-info-label">
-                          <strong>Nội dung chuyển khoản:</strong>
+                        <div className="payment-info-section">
+                          <div className="payment-info-label">
+                            <strong>Nội dung chuyển khoản:</strong>
+                          </div>
+                          <div className="payment-info-value">
+                            {transferContent}
+                          </div>
                         </div>
-                        <div className="payment-info-value">
-                          {transferContent}
+                        <div className="payment-info-section">
+                          <div className="payment-info-label">
+                            <strong>Số tiền cần thanh toán:</strong>
+                          </div>
+                          <div className="payment-info-amount">
+                            {formatPrice(amount)}
+                          </div>
                         </div>
+                        <div className="text-center">
+                          <Badge bg={paymentStatus === "paid" ? "success" : paymentStatus === "pending" ? "warning" : "danger"} className="payment-status-badge">
+                            {paymentStatus === "paid" ? "✓ Đã thanh toán" : paymentStatus === "pending" ? "⏳ Đang chờ thanh toán" : "✗ Đơn hàng hủy"}
+                          </Badge>
+                        </div>
+
+                        {/* Countdown timer */}
+                        {timeLeft > 0 && (
+                          <div className="countdown-timer">
+                            Thời gian còn lại: <strong>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
+                          </div>
+                        )}
                       </div>
-                      <div className="payment-info-section">
-                        <div className="payment-info-label">
-                          <strong>Số tiền cần thanh toán:</strong>
-                        </div>
-                        <div className="payment-info-amount">
-                          {formatPrice(amount)}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <Badge bg={paymentStatus === "paid" ? "success" : paymentStatus === "pending" ? "warning" : "danger"} className="payment-status-badge">
-                          {paymentStatus === "paid" ? "✓ Đã thanh toán" : paymentStatus === "pending" ? "⏳ Đang chờ thanh toán" : "✗ Đơn hàng hủy"}
-                        </Badge>
-                      </div>
-                      
-                      {/* Countdown timer */}
-                      {timeLeft > 0 && (
-                        <div className="countdown-timer">
-                          Thời gian còn lại: <strong>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
-                        </div>
-                      )}
-                    </div>
                     )}
                   </Card.Body>
                 </Card>
