@@ -163,6 +163,16 @@ class OrderController extends Controller
             }
 
             $order->update(['status' => 'paid']);
+            
+            // Tích điểm thưởng: 10,000 VND = 1 điểm
+            // Tính điểm dựa trên tổng tiền đơn hàng (total_amount + shipping_fee)
+            $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
+            $pointsEarned = (int) floor($orderTotal / 10000);
+            
+            if ($pointsEarned > 0) {
+                $order->user->increment('loyalty_points', $pointsEarned);
+            }
+            
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -256,7 +266,7 @@ class OrderController extends Controller
         try {
             // 📦 Xử lý tồn kho khi thay đổi trạng thái
             
-            // Trường hợp 1: pending → paid (thanh toán thành công) → Giảm tồn kho
+            // Trường hợp 1: pending → paid (thanh toán thành công) → Giảm tồn kho và tích điểm
             if ($oldStatus === 'pending' && $newStatus === 'paid') {
                 foreach ($order->items as $item) {
                     $product = Product::lockForUpdate()->find($item->product_id);
@@ -271,9 +281,18 @@ class OrderController extends Controller
                         $product->update(['stock_quantity' => $newStock]);
                     }
                 }
+                
+                // Tích điểm thưởng: 10,000 VND = 1 điểm
+                // Tính điểm dựa trên tổng tiền đơn hàng (total_amount + shipping_fee)
+                $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
+                $pointsEarned = (int) floor($orderTotal / 10000);
+                
+                if ($pointsEarned > 0) {
+                    $order->user->increment('loyalty_points', $pointsEarned);
+                }
             }
             
-            // Trường hợp 2: paid/processing → cancelled → Cộng lại tồn kho
+            // Trường hợp 2: paid/processing → cancelled → Cộng lại tồn kho và trừ điểm đã tích
             if (in_array($oldStatus, ['paid', 'processing']) && $newStatus === 'cancelled') {
                 foreach ($order->items as $item) {
                     $product = Product::lockForUpdate()->find($item->product_id);
@@ -281,9 +300,22 @@ class OrderController extends Controller
                         $product->increment('stock_quantity', $item->quantity);
                     }
                 }
+                
+                // Trừ điểm đã tích khi hủy đơn (nếu đã tích điểm)
+                $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
+                $pointsEarned = (int) floor($orderTotal / 10000);
+                
+                if ($pointsEarned > 0) {
+                    $user = $order->user;
+                    $currentPoints = $user->loyalty_points ?? 0;
+                    $pointsToDeduct = min($pointsEarned, $currentPoints);
+                    if ($pointsToDeduct > 0) {
+                        $user->decrement('loyalty_points', $pointsToDeduct);
+                    }
+                }
             }
             
-            // Trường hợp 3: cancelled → paid (khôi phục đơn hàng) → Giảm tồn kho lại
+            // Trường hợp 3: cancelled → paid (khôi phục đơn hàng) → Giảm tồn kho lại và tích điểm
             if ($oldStatus === 'cancelled' && $newStatus === 'paid') {
                 foreach ($order->items as $item) {
                     $product = Product::lockForUpdate()->find($item->product_id);
@@ -297,6 +329,14 @@ class OrderController extends Controller
                         }
                         $product->update(['stock_quantity' => $newStock]);
                     }
+                }
+                
+                // Tích điểm thưởng: 10,000 VND = 1 điểm
+                $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
+                $pointsEarned = (int) floor($orderTotal / 10000);
+                
+                if ($pointsEarned > 0) {
+                    $order->user->increment('loyalty_points', $pointsEarned);
                 }
             }
 
@@ -369,6 +409,23 @@ class OrderController extends Controller
                         $product->increment('stock_quantity', $item->quantity);
                     }
                 }
+                
+                // Trừ điểm đã tích khi hủy đơn (nếu đã tích điểm)
+                $orderTotal = $order->total_amount + ($order->shipping_fee ?? 0);
+                $pointsEarned = (int) floor($orderTotal / 10000);
+                
+                if ($pointsEarned > 0) {
+                    $currentPoints = $user->loyalty_points ?? 0;
+                    $pointsToDeduct = min($pointsEarned, $currentPoints);
+                    if ($pointsToDeduct > 0) {
+                        $user->decrement('loyalty_points', $pointsToDeduct);
+                    }
+                }
+            }
+            
+            // Hoàn lại điểm đã sử dụng nếu có
+            if ($order->loyalty_points_used > 0) {
+                $user->increment('loyalty_points', $order->loyalty_points_used);
             }
 
             $order->update([

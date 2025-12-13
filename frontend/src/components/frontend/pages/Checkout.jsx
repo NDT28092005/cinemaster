@@ -11,10 +11,11 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Badge from "react-bootstrap/Badge";
-import { FaCheckCircle, FaClock, FaTimesCircle, FaArrowLeft, FaCreditCard, FaMapMarkerAlt, FaPlus } from "react-icons/fa";
+import { FaCheckCircle, FaClock, FaTimesCircle, FaArrowLeft, FaCreditCard, FaMapMarkerAlt, FaPlus, FaStar } from "react-icons/fa";
+import '../../../assets/css/_checkout.scss';
 
 export default function Checkout() {
-  const { token, user, loading: authLoading } = useContext(AuthContext);
+  const { token, user, loading: authLoading, refreshUser } = useContext(AuthContext);
   const [cart, setCart] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -38,6 +39,21 @@ export default function Checkout() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [wrappingPaperId, setWrappingPaperId] = useState("");
+  const [wrappingPaper, setWrappingPaper] = useState("");
+  const [wrappingPaperImage, setWrappingPaperImage] = useState("");
+  const [decorativeAccessoryId, setDecorativeAccessoryId] = useState("");
+  const [decorativeAccessories, setDecorativeAccessories] = useState("");
+  const [decorativeAccessoryImage, setDecorativeAccessoryImage] = useState("");
+  const [cardTypeId, setCardTypeId] = useState("");
+  const [cardType, setCardType] = useState("");
+  const [cardTypeImage, setCardTypeImage] = useState("");
+  const [cardNote, setCardNote] = useState("");
+  const [wrappingPapers, setWrappingPapers] = useState([]);
+  const [decorativeAccessoriesList, setDecorativeAccessoriesList] = useState([]);
+  const [cardTypes, setCardTypes] = useState([]);
+  const [loyaltyPointsUsed, setLoyaltyPointsUsed] = useState(0);
+  const [availableLoyaltyPoints, setAvailableLoyaltyPoints] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,7 +104,60 @@ export default function Checkout() {
   useEffect(() => {
     fetchCart();
     fetchAddresses();
-  }, [token, authLoading, navigate, location]);
+    fetchGiftOptions();
+    fetchUserLoyaltyPoints();
+  }, [token, authLoading, navigate, location, user]);
+
+  // Cập nhật điểm từ user object khi user thay đổi
+  useEffect(() => {
+    if (user && user.loyalty_points !== undefined) {
+      console.log("Updating loyalty points from user object:", user.loyalty_points);
+      setAvailableLoyaltyPoints(user.loyalty_points || 0);
+    }
+  }, [user]);
+  
+  // Lấy số điểm thưởng hiện có của user
+  const fetchUserLoyaltyPoints = async () => {
+    if (!user || !token) {
+      console.log("Cannot fetch loyalty points: no user or token");
+      return;
+    }
+    try {
+      const currentToken = token || localStorage.getItem("token");
+      console.log("Fetching loyalty points for user:", user.id);
+      const res = await axios.get("http://localhost:8000/api/me", {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      const newPoints = res.data.loyalty_points || 0;
+      console.log("Fetched loyalty points:", newPoints, "from user data:", res.data);
+      setAvailableLoyaltyPoints(newPoints);
+    } catch (err) {
+      console.error("Error fetching loyalty points:", err);
+      setAvailableLoyaltyPoints(0);
+    }
+  };
+
+  // Lấy danh sách quà tặng
+  const fetchGiftOptions = async () => {
+    try {
+      const [papersRes, accessoriesRes, cardsRes] = await Promise.all([
+        axios.get('http://localhost:8000/api/gift-options/wrapping-papers'),
+        axios.get('http://localhost:8000/api/gift-options/decorative-accessories'),
+        axios.get('http://localhost:8000/api/gift-options/card-types')
+      ]);
+      
+      console.log('Wrapping papers:', papersRes.data);
+      console.log('Accessories:', accessoriesRes.data);
+      console.log('Card types:', cardsRes.data);
+      
+      setWrappingPapers(papersRes.data || []);
+      setDecorativeAccessoriesList(accessoriesRes.data || []);
+      setCardTypes(cardsRes.data || []);
+    } catch (error) {
+      console.error('Error fetching gift options:', error);
+      console.error('Error response:', error.response?.data);
+    }
+  };
 
   // Refresh addresses khi quay lại từ AddAddress
   useEffect(() => {
@@ -207,6 +276,26 @@ export default function Checkout() {
       if (customerWard && customerWard.trim()) {
         checkoutData.customer_ward = customerWard.trim();
       }
+      if (wrappingPaperId) {
+        checkoutData.wrapping_paper_id = wrappingPaperId;
+        checkoutData.wrapping_paper = wrappingPaper;
+      }
+      if (decorativeAccessoryId) {
+        checkoutData.decorative_accessory_id = decorativeAccessoryId;
+        checkoutData.decorative_accessories = decorativeAccessories;
+      }
+      if (cardTypeId) {
+        checkoutData.card_type_id = cardTypeId;
+        checkoutData.card_type = cardType;
+      }
+      if (cardNote && cardNote.trim()) {
+        checkoutData.card_note = cardNote.trim();
+      }
+      
+      // Thêm điểm thưởng sử dụng
+      if (loyaltyPointsUsed > 0) {
+        checkoutData.loyalty_points_used = loyaltyPointsUsed;
+      }
       
       console.log("Sending checkout data:", checkoutData);
       
@@ -239,6 +328,24 @@ export default function Checkout() {
       setPaymentStatus("pending");
       setTimeLeft(5 * 60); // 5 phút countdown
       setSubmitting(false);
+      
+      // Cập nhật lại số điểm sau khi sử dụng
+      if (loyaltyPointsUsed > 0) {
+        // Cập nhật từ response nếu có
+        if (res.data.remaining_loyalty_points !== undefined) {
+          console.log("Updated loyalty points from response:", res.data.remaining_loyalty_points);
+          setAvailableLoyaltyPoints(res.data.remaining_loyalty_points);
+        } else {
+          // Nếu không có trong response, fetch lại
+          await fetchUserLoyaltyPoints();
+        }
+        // Refresh user trong AuthContext để cập nhật điểm ở header và profile
+        if (refreshUser) {
+          await refreshUser();
+        }
+        // Reset điểm đã sử dụng
+        setLoyaltyPointsUsed(0);
+      }
     } catch (err) {
       console.error("Checkout error:", err);
       console.error("Error response:", err.response?.data);
@@ -315,6 +422,13 @@ export default function Checkout() {
         setPaymentStatus("paid");
         setPaymentMessage({ type: "success", text: "🎉 Thanh toán thành công!" });
         setCart({ items: [], total_amount: 0 });
+        
+        // Cập nhật lại số điểm sau khi thanh toán (điểm mới được tích)
+        await fetchUserLoyaltyPoints();
+        // Refresh user trong AuthContext để cập nhật điểm ở header và profile
+        if (refreshUser) {
+          await refreshUser();
+        }
 
         // Xóa giỏ hàng
         await fetch("http://localhost:8000/api/cart/clear-cart", {
@@ -705,6 +819,331 @@ export default function Checkout() {
                       </Form.Group>
                     </Col>
 
+                    {/* Tùy chọn quà tặng */}
+                    <Col xs={12}>
+                      <div style={{
+                        marginTop: '2rem',
+                        padding: '1.5rem',
+                        background: 'rgba(255, 255, 255, 0.7)',
+                        borderRadius: '15px',
+                        border: '2px solid rgba(251, 99, 118, 0.1)'
+                      }}>
+                        <h3 style={{
+                          color: '#5D2A42',
+                          marginBottom: '1.5rem',
+                          fontWeight: 600,
+                          fontSize: '1.2rem'
+                        }}>
+                          Tùy chọn quà tặng
+                        </h3>
+
+                        <Row className="g-3">
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label style={{
+                                color: '#5D2A42',
+                                fontWeight: 600,
+                                marginBottom: '0.5rem'
+                              }}>
+                                Giấy gói
+                              </Form.Label>
+                              <Form.Select
+                                value={wrappingPaperId}
+                                onChange={(e) => {
+                                  const selected = wrappingPapers.find(p => p.id === parseInt(e.target.value));
+                                  setWrappingPaperId(e.target.value);
+                                  setWrappingPaper(selected ? selected.name : '');
+                                  setWrappingPaperImage(selected ? selected.image_url : '');
+                                }}
+                                style={{
+                                  borderRadius: '15px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  fontSize: '0.95rem',
+                                  padding: '0.85rem 1.2rem',
+                                  transition: 'all 0.3s ease',
+                                  background: 'white'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#FB6376';
+                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                              >
+                                <option value="">Chọn giấy gói</option>
+                                {wrappingPapers.map(paper => (
+                                  <option key={paper.id} value={paper.id}>
+                                    {paper.name} {paper.quantity > 0 ? `(Còn ${paper.quantity})` : '(Hết hàng)'}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              {wrappingPaperImage && wrappingPaperImage.trim() && (
+                                <div style={{
+                                  marginTop: '1rem',
+                                  padding: '1rem',
+                                  background: 'white',
+                                  borderRadius: '10px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  textAlign: 'center'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    color: '#5D2A42',
+                                    marginBottom: '0.5rem'
+                                  }}>Xem trước:</div>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    minHeight: '150px'
+                                  }}>
+                                    <img
+                                      src={wrappingPaperImage}
+                                      alt={wrappingPaper}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '200px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        objectFit: 'contain'
+                                      }}
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.style.display = 'none';
+                                        const parent = e.target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = '<div style="padding: 2rem; color: #999; font-size: 0.9rem;">Không thể tải hình ảnh</div>';
+                                        }
+                                      }}
+                                      onLoad={() => console.log('Wrapping paper image loaded:', wrappingPaperImage)}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </Form.Group>
+                          </Col>
+
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label style={{
+                                color: '#5D2A42',
+                                fontWeight: 600,
+                                marginBottom: '0.5rem'
+                              }}>
+                                Phụ kiện trang trí
+                              </Form.Label>
+                              <Form.Select
+                                value={decorativeAccessoryId}
+                                onChange={(e) => {
+                                  const selected = decorativeAccessoriesList.find(a => a.id === parseInt(e.target.value));
+                                  setDecorativeAccessoryId(e.target.value);
+                                  setDecorativeAccessories(selected ? selected.name : '');
+                                  setDecorativeAccessoryImage(selected ? selected.image_url : '');
+                                }}
+                                style={{
+                                  borderRadius: '15px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  fontSize: '0.95rem',
+                                  padding: '0.85rem 1.2rem',
+                                  transition: 'all 0.3s ease',
+                                  background: 'white'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#FB6376';
+                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                              >
+                                <option value="">Chọn phụ kiện</option>
+                                {decorativeAccessoriesList.map(accessory => (
+                                  <option key={accessory.id} value={accessory.id}>
+                                    {accessory.name} {accessory.quantity > 0 ? `(Còn ${accessory.quantity})` : '(Hết hàng)'}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              {decorativeAccessoryImage && decorativeAccessoryImage.trim() && (
+                                <div style={{
+                                  marginTop: '1rem',
+                                  padding: '1rem',
+                                  background: 'white',
+                                  borderRadius: '10px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  textAlign: 'center'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    color: '#5D2A42',
+                                    marginBottom: '0.5rem'
+                                  }}>Xem trước:</div>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    minHeight: '150px'
+                                  }}>
+                                    <img
+                                      src={decorativeAccessoryImage}
+                                      alt={decorativeAccessories}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '200px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        objectFit: 'contain'
+                                      }}
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.style.display = 'none';
+                                        const parent = e.target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = '<div style="padding: 2rem; color: #999; font-size: 0.9rem;">Không thể tải hình ảnh</div>';
+                                        }
+                                      }}
+                                      onLoad={() => console.log('Accessory image loaded:', decorativeAccessoryImage)}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </Form.Group>
+                          </Col>
+
+                          <Col xs={12}>
+                            <Form.Group className="mb-3">
+                              <Form.Label style={{
+                                color: '#5D2A42',
+                                fontWeight: 600,
+                                marginBottom: '0.5rem'
+                              }}>
+                                Loại thiệp
+                              </Form.Label>
+                              <Form.Select
+                                value={cardTypeId}
+                                onChange={(e) => {
+                                  const selected = cardTypes.find(c => c.id === parseInt(e.target.value));
+                                  setCardTypeId(e.target.value);
+                                  setCardType(selected ? selected.name : '');
+                                  setCardTypeImage(selected ? selected.image_url : '');
+                                }}
+                                style={{
+                                  borderRadius: '15px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  fontSize: '0.95rem',
+                                  padding: '0.85rem 1.2rem',
+                                  transition: 'all 0.3s ease',
+                                  background: 'white'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#FB6376';
+                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                              >
+                                <option value="">Chọn loại thiệp</option>
+                                {cardTypes.map(card => (
+                                  <option key={card.id} value={card.id}>
+                                    {card.name} {card.quantity > 0 ? `(Còn ${card.quantity})` : '(Hết hàng)'}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              {cardTypeImage && cardTypeImage.trim() && (
+                                <div style={{
+                                  marginTop: '1rem',
+                                  padding: '1rem',
+                                  background: 'white',
+                                  borderRadius: '10px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  textAlign: 'center'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    color: '#5D2A42',
+                                    marginBottom: '0.5rem'
+                                  }}>Xem trước:</div>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    minHeight: '150px'
+                                  }}>
+                                    <img
+                                      src={cardTypeImage}
+                                      alt={cardType}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '200px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ddd',
+                                        objectFit: 'contain'
+                                      }}
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.style.display = 'none';
+                                        const parent = e.target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = '<div style="padding: 2rem; color: #999; font-size: 0.9rem;">Không thể tải hình ảnh</div>';
+                                        }
+                                      }}
+                                      onLoad={() => console.log('Card type image loaded:', cardTypeImage)}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </Form.Group>
+                          </Col>
+
+                          <Col xs={12}>
+                            <Form.Group className="mb-3">
+                              <Form.Label style={{
+                                color: '#5D2A42',
+                                fontWeight: 600,
+                                marginBottom: '0.5rem'
+                              }}>
+                                Ghi chú cho thiệp
+                              </Form.Label>
+                              <Form.Control
+                                as="textarea"
+                                rows={4}
+                                placeholder="Nhập lời chúc hoặc ghi chú bạn muốn ghi trên thiệp..."
+                                value={cardNote}
+                                onChange={(e) => setCardNote(e.target.value)}
+                                style={{
+                                  borderRadius: '15px',
+                                  border: '2px solid rgba(251, 99, 118, 0.2)',
+                                  fontSize: '0.95rem',
+                                  padding: '0.85rem 1.2rem',
+                                  transition: 'all 0.3s ease',
+                                  resize: 'vertical'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#FB6376';
+                                  e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
+                                  e.target.style.boxShadow = 'none';
+                                }}
+                                maxLength={500}
+                              />
+                              <Form.Text className="text-muted" style={{ fontSize: '0.85rem' }}>
+                                {cardNote.length}/500 ký tự
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+                      </div>
+                    </Col>
+
                     <Col xs={12}>
                       <Form.Group className="mb-3">
                         <Form.Label style={{
@@ -747,35 +1186,60 @@ export default function Checkout() {
           </Col>
 
           <Col lg={4}>
-            <Card style={{
-              borderRadius: '20px',
-              border: '2px solid rgba(251, 99, 118, 0.15)',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 249, 236, 0.9))',
-              boxShadow: '0 8px 25px rgba(93, 42, 66, 0.1)',
-              animation: 'fadeInUp 0.6s ease-out 0.4s both',
-              position: 'sticky',
-              top: '100px'
-            }}>
-              <Card.Body style={{ padding: '2rem' }}>
-                <h2 style={{
-                  color: '#5D2A42',
-                  marginBottom: '1.5rem',
-                  fontWeight: 700,
-                  fontSize: '1.5rem',
-                  position: 'relative',
-                  paddingBottom: '1rem'
-                }}>
-                  Tổng đơn hàng
-                  <span style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: '60px',
-                    height: '3px',
-                    background: 'linear-gradient(90deg, #FB6376, #FCB1A6)',
-                    borderRadius: '2px'
-                  }}></span>
-                </h2>
+            <Card className="order-summary-card">
+              <Card.Body>
+                <h2>Tổng đơn hàng</h2>
+
+                {/* Đổi điểm thưởng - Đặt ở trên cùng */}
+                {user && (
+                  <div className="loyalty-points-section">
+                    <div className="loyalty-header">
+                      <FaStar className="star-icon" />
+                      <div className="loyalty-info">
+                        <div className="loyalty-title">Đổi điểm thưởng</div>
+                        <div className="loyalty-subtitle">
+                          {availableLoyaltyPoints > 0 ? (
+                            <>Bạn có <strong>{availableLoyaltyPoints}</strong> điểm • 1 điểm = 100đ</>
+                          ) : (
+                            <>Bạn chưa có điểm thưởng • Tích điểm: 10,000đ = 1 điểm</>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="loyalty-input-group">
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        max={availableLoyaltyPoints}
+                        value={loyaltyPointsUsed}
+                        onChange={(e) => {
+                          const value = Math.max(0, Math.min(availableLoyaltyPoints, parseInt(e.target.value) || 0));
+                          setLoyaltyPointsUsed(value);
+                        }}
+                        placeholder="Nhập số điểm"
+                        disabled={availableLoyaltyPoints === 0}
+                        className="loyalty-input"
+                      />
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => {
+                          const maxUsable = Math.min(availableLoyaltyPoints, Math.floor((cart?.total_amount || 0) / 100));
+                          setLoyaltyPointsUsed(maxUsable);
+                        }}
+                        disabled={availableLoyaltyPoints === 0}
+                        className="max-button"
+                      >
+                        Dùng tối đa
+                      </Button>
+                    </div>
+                    {loyaltyPointsUsed > 0 && (
+                      <div className="discount-display">
+                        ✓ Giảm: {formatPrice(loyaltyPointsUsed * 100)}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Order Items Summary */}
                 {cart?.items && cart.items.length > 0 && (
@@ -830,6 +1294,7 @@ export default function Checkout() {
                   </div>
                 )}
 
+
                 <div style={{
                   marginBottom: '1.5rem'
                 }}>
@@ -846,6 +1311,21 @@ export default function Checkout() {
                       {formatPrice(cart?.total_amount || 0)}
                     </span>
                   </div>
+                  {loyaltyPointsUsed > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.95rem',
+                      color: '#28a745'
+                    }}>
+                      <span>Giảm giá (điểm thưởng):</span>
+                      <span style={{ fontWeight: 600, color: '#28a745' }}>
+                        -{formatPrice(loyaltyPointsUsed * 100)}
+                      </span>
+                    </div>
+                  )}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -884,7 +1364,7 @@ export default function Checkout() {
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text'
                     }}>
-                      {formatPrice(cart?.total_amount || 0)}
+                      {formatPrice(Math.max(0, (cart?.total_amount || 0) - (loyaltyPointsUsed * 100)))}
                     </span>
                   </div>
                 </div>

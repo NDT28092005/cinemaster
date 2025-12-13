@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PromotionUsageController;
+use App\Http\Controllers\Api\GiftOptionController;
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -156,6 +157,33 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index']);
 });
 Route::middleware('auth:sanctum')->get('/admin/me', [AdminAuthController::class, 'me']);
+
+// Gift Options - Public endpoints (for checkout)
+Route::get('/gift-options/wrapping-papers', [GiftOptionController::class, 'getWrappingPapers']);
+Route::get('/gift-options/decorative-accessories', [GiftOptionController::class, 'getDecorativeAccessories']);
+Route::get('/gift-options/card-types', [GiftOptionController::class, 'getCardTypes']);
+
+// Gift Options - Admin endpoints
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/gift-options')->group(function () {
+    // Wrapping Papers
+    Route::get('/wrapping-papers', [GiftOptionController::class, 'indexWrappingPapers']);
+    Route::post('/wrapping-papers', [GiftOptionController::class, 'storeWrappingPaper']);
+    Route::put('/wrapping-papers/{id}', [GiftOptionController::class, 'updateWrappingPaper']);
+    Route::delete('/wrapping-papers/{id}', [GiftOptionController::class, 'destroyWrappingPaper']);
+    
+    // Decorative Accessories
+    Route::get('/decorative-accessories', [GiftOptionController::class, 'indexDecorativeAccessories']);
+    Route::post('/decorative-accessories', [GiftOptionController::class, 'storeDecorativeAccessory']);
+    Route::put('/decorative-accessories/{id}', [GiftOptionController::class, 'updateDecorativeAccessory']);
+    Route::delete('/decorative-accessories/{id}', [GiftOptionController::class, 'destroyDecorativeAccessory']);
+    
+    // Card Types
+    Route::get('/card-types', [GiftOptionController::class, 'indexCardTypes']);
+    Route::post('/card-types', [GiftOptionController::class, 'storeCardType']);
+    Route::put('/card-types/{id}', [GiftOptionController::class, 'updateCardType']);
+    Route::delete('/card-types/{id}', [GiftOptionController::class, 'destroyCardType']);
+});
+
 // -------------------------
 // Public Routes
 // -------------------------

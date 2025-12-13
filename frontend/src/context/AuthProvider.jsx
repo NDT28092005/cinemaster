@@ -16,6 +16,28 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getInitialToken());
   const [loading, setLoading] = useState(true);
 
+  // Hàm refresh user data
+  const refreshUser = async () => {
+    const currentToken = token || localStorage.getItem("token");
+    if (!currentToken) return;
+    
+    try {
+      const res = await axios.get("http://localhost:8000/api/me", {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      const userData = res.data.user || res.data;
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error("Error refreshing user:", err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem("token");
+        setUser(null);
+        setToken(null);
+      }
+    }
+  };
+
   useEffect(() => {
     let storedToken;
     try {
@@ -160,7 +182,7 @@ export const AuthProvider = ({ children }) => {
   }, [token, user, loading]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, token, setToken, loading }}>
+    <AuthContext.Provider value={{ user, setUser, token, setToken, loading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

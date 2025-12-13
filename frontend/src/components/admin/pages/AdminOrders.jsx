@@ -457,6 +457,56 @@ const AdminOrders = () => {
                 </p>
               </div>
 
+              {/* Tùy chọn quà tặng */}
+              {(selectedOrder.wrapping_paper || selectedOrder.decorative_accessories || selectedOrder.card_type || selectedOrder.card_note) && (
+                <div className="mb-4" style={{
+                  padding: '1rem',
+                  background: 'rgba(251, 99, 118, 0.05)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(251, 99, 118, 0.2)'
+                }}>
+                  <h3 style={{ 
+                    color: '#5D2A42', 
+                    fontSize: '1.2rem', 
+                    fontWeight: '600',
+                    marginBottom: '1rem'
+                  }}>
+                    Tùy chọn quà tặng:
+                  </h3>
+                  {selectedOrder.wrapping_paper && (
+                    <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                      <strong style={{ color: '#5D2A42' }}>Giấy gói:</strong> {selectedOrder.wrapping_paper}
+                    </p>
+                  )}
+                  {selectedOrder.decorative_accessories && (
+                    <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                      <strong style={{ color: '#5D2A42' }}>Phụ kiện trang trí:</strong> {selectedOrder.decorative_accessories}
+                    </p>
+                  )}
+                  {selectedOrder.card_type && (
+                    <p style={{ marginBottom: '0.5rem', color: '#666' }}>
+                      <strong style={{ color: '#5D2A42' }}>Loại thiệp:</strong> {selectedOrder.card_type}
+                    </p>
+                  )}
+                  {selectedOrder.card_note && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <strong style={{ color: '#5D2A42' }}>Ghi chú cho thiệp:</strong>
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        background: 'white',
+                        borderRadius: '5px',
+                        border: '1px solid #ddd',
+                        fontStyle: 'italic',
+                        color: '#666'
+                      }}>
+                        {selectedOrder.card_note}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <h3 style={{ 
                   color: '#5D2A42', 

@@ -9,9 +9,14 @@ class IsAdmin
 {
     public function handle(Request $request, Closure $next)
     {
-        if (auth()->check() && in_array(auth()->user()->role, ['admin', 'manager'])) {
+        $user = $request->user();
+        
+        if ($user && in_array($user->role, ['admin', 'manager'])) {
             return $next($request);
         }
-        abort(403, 'Unauthorized');
+        
+        return response()->json([
+            'message' => 'Bạn không có quyền truy cập. Vui lòng đăng nhập với tài khoản admin.'
+        ], 403);
     }
 }
