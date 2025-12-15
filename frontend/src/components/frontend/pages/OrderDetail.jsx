@@ -10,6 +10,8 @@ import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Modal from 'react-bootstrap/Modal';
+import Form from 'react-bootstrap/Form';
 import { 
   FaArrowLeft, 
   FaShoppingBag, 
@@ -33,6 +35,18 @@ const STATUS_INFO = {
   cancelled: { label: 'Đã hủy', icon: FaTimesCircle, color: '#dc3545' },
 };
 
+const GHTK_STATUS_INFO = {
+  created: { label: 'Đã tạo đơn', icon: FaBox, color: '#17a2b8' },
+  picking: { label: 'Đang lấy hàng', icon: FaTruck, color: '#007bff' },
+  delivering: { label: 'Đang giao hàng', icon: FaTruck, color: '#007bff' },
+  delivered: { label: 'Đã giao hàng', icon: FaCheckCircle, color: '#28a745' },
+  returned: { label: 'Đã hoàn trả', icon: FaTimesCircle, color: '#dc3545' },
+  cancelled: { label: 'Đã hủy', icon: FaTimesCircle, color: '#dc3545' },
+  lost: { label: 'Thất lạc', icon: FaTimesCircle, color: '#dc3545' },
+  unknown: { label: 'Không xác định', icon: FaBox, color: '#666' },
+  no_label: { label: 'Chưa có mã vận đơn', icon: FaClock, color: '#FFA500' },
+};
+
 export default function OrderDetail() {
   const { id } = useParams();
   const { user, token, loading: authLoading } = useContext(AuthContext);
@@ -41,6 +55,12 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [returnRequest, setReturnRequest] = useState(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnType, setReturnType] = useState('refund');
+  const [returnReason, setReturnReason] = useState('');
+  const [returnNote, setReturnNote] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   // SEO Meta Tags
   useEffect(() => {
@@ -78,6 +98,30 @@ export default function OrderDetail() {
         }
 
         setOrder(orderData);
+        
+        // Debug: Kiểm tra dữ liệu ảnh sản phẩm
+        if (orderData.items) {
+          console.log('Order items with images:', orderData.items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product?.name,
+            has_images: !!item.product?.images?.length,
+            image_url: item.product?.image_url,
+            first_image_url: item.product?.images?.[0]?.image_url
+          })));
+        }
+
+        // Fetch return request nếu có
+        try {
+          const returnRes = await axios.get('http://localhost:8000/api/returns', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const returnForOrder = returnRes.data.find(r => r.order_id === parseInt(id));
+          if (returnForOrder) {
+            setReturnRequest(returnForOrder);
+          }
+        } catch (err) {
+          console.error('Error fetching return request:', err);
+        }
       } catch (err) {
         console.error('Error fetching order:', err);
         if (err.response?.status === 404) {
@@ -117,11 +161,23 @@ export default function OrderDetail() {
     return STATUS_INFO[status] || { label: status, icon: FaBox, color: '#666' };
   };
 
+  const getGHTKStatusInfo = (status) => {
+    return GHTK_STATUS_INFO[status] || GHTK_STATUS_INFO.unknown;
+  };
+
   const getProductImage = (product) => {
     if (!product) return 'https://via.placeholder.com/100x100?text=No+Image';
+    
+    // Ưu tiên: images relationship (nếu có)
     if (product.images && product.images.length > 0 && product.images[0]?.image_url) {
       return product.images[0].image_url;
     }
+    
+    // Fallback: image_url trực tiếp từ product
+    if (product.image_url) {
+      return product.image_url;
+    }
+    
     return 'https://via.placeholder.com/100x100?text=No+Image';
   };
 
@@ -191,6 +247,16 @@ export default function OrderDetail() {
   const statusInfo = getStatusInfo(order.status);
   const StatusIcon = statusInfo.icon;
   const canCancel = ['pending', 'paid', 'processing'].includes(order.status);
+  
+  // Kiểm tra GHTK status để quyết định có thể return không
+  const ghtkOrder = order.ghtk_order || order.ghtkOrder;
+  const ghtkStatus = ghtkOrder?.status;
+  const ghtkStatusInfo = ghtkStatus ? getGHTKStatusInfo(ghtkStatus) : null;
+  const GHTKStatusIcon = ghtkStatusInfo?.icon || FaBox;
+  
+  // Chỉ cho phép return khi order completed VÀ GHTK status là delivered hoặc returned
+  const canReturn = order.status === 'completed' && 
+    (!ghtkStatus || ['delivered', 'returned'].includes(ghtkStatus));
 
   const handleCancelOrder = async () => {
     if (!token || !order) return;
@@ -212,13 +278,80 @@ export default function OrderDetail() {
         setOrder(response.data.order);
       }
 
-      alert(response.data?.message || 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.');
+      // Hiển thị message từ backend (đã xử lý logic hoàn tiền)
+      alert(response.data?.message || 'Đơn hàng đã được hủy.');
     } catch (err) {
       console.error('Cancel order error:', err);
       alert(err.response?.data?.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.');
     } finally {
       setCancelling(false);
     }
+  };
+
+  const handleSubmitReturnRequest = async () => {
+    if (!returnReason.trim()) {
+      alert('Vui lòng nhập lý do đổi/trả hàng');
+      return;
+    }
+
+    if (!token || !order) return;
+
+    // Kiểm tra GHTK status trước khi submit
+    if (ghtkStatus && !['delivered', 'returned'].includes(ghtkStatus)) {
+      alert(`Không thể yêu cầu đổi/trả hàng. Trạng thái vận chuyển hiện tại: ${ghtkStatusInfo?.label || ghtkStatus}. Chỉ có thể yêu cầu khi đơn hàng đã được giao hoặc đã hoàn trả.`);
+      return;
+    }
+
+    setSubmittingReturn(true);
+    try {
+      const response = await axios.post(
+        'http://localhost:8000/api/returns',
+        {
+          order_id: order.id,
+          type: returnType,
+          reason: returnReason,
+          note: returnNote,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data?.data) {
+        setReturnRequest(response.data.data);
+        setShowReturnModal(false);
+        setReturnReason('');
+        setReturnNote('');
+        alert('Đã gửi yêu cầu đổi/trả hàng thành công! Chúng tôi sẽ xử lý trong thời gian sớm nhất.');
+      }
+    } catch (err) {
+      console.error('Error submitting return request:', err);
+      alert(err.response?.data?.message || 'Không thể gửi yêu cầu. Vui lòng thử lại sau.');
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
+  const getReturnStatusLabel = (status) => {
+    const labels = {
+      requested: 'Chờ duyệt',
+      approved: 'Đã duyệt',
+      shipping_back: 'Đang gửi hàng hoàn',
+      received: 'Đã nhận hàng hoàn',
+      completed: 'Hoàn thành',
+      rejected: 'Từ chối',
+    };
+    return labels[status] || status;
+  };
+
+  const getReturnStatusColor = (status) => {
+    const colors = {
+      requested: 'warning',
+      approved: 'info',
+      shipping_back: 'primary',
+      received: 'success',
+      completed: 'success',
+      rejected: 'danger',
+    };
+    return colors[status] || 'secondary';
   };
 
   return (
@@ -276,6 +409,30 @@ export default function OrderDetail() {
               >
                 {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
               </Button>
+            )}
+            {canReturn && !returnRequest && (
+              <Button
+                variant="outline-warning"
+                onClick={() => {
+                  if (ghtkStatus && !['delivered', 'returned'].includes(ghtkStatus)) {
+                    alert(`Không thể yêu cầu đổi/trả hàng. Trạng thái vận chuyển hiện tại: ${ghtkStatusInfo?.label || ghtkStatus}. Chỉ có thể yêu cầu khi đơn hàng đã được giao hoặc đã hoàn trả.`);
+                    return;
+                  }
+                  setShowReturnModal(true);
+                }}
+                style={{
+                  borderRadius: '8px',
+                  padding: '0.5rem 1.25rem',
+                  fontWeight: 600
+                }}
+              >
+                Yêu cầu đổi/trả hàng
+              </Button>
+            )}
+            {returnRequest && (
+              <Badge bg={getReturnStatusColor(returnRequest.status)} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                Yêu cầu {returnRequest.type === 'refund' ? 'hoàn tiền' : 'đổi hàng'}: {getReturnStatusLabel(returnRequest.status)}
+              </Badge>
             )}
           </div>
         </div>
@@ -422,6 +579,78 @@ export default function OrderDetail() {
                   </>
                 )}
 
+                {/* GHTK Tracking Info */}
+                {ghtkOrder && (
+                  <>
+                    <hr />
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      background: 'rgba(0, 123, 255, 0.05)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(0, 123, 255, 0.2)'
+                    }}>
+                      <strong style={{ color: '#5D2A42', fontSize: '1rem', marginBottom: '0.75rem', display: 'block' }}>
+                        Thông tin vận chuyển GHTK
+                      </strong>
+                      {ghtkStatus && (
+                        <div className="info-item" style={{ marginBottom: '0.75rem' }}>
+                          <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <GHTKStatusIcon style={{ color: ghtkStatusInfo?.color }} />
+                            Trạng thái:
+                          </strong>
+                          <Badge 
+                            bg="info" 
+                            style={{ 
+                              backgroundColor: ghtkStatusInfo?.color,
+                              padding: '0.25rem 0.75rem',
+                              fontSize: '0.85rem',
+                              marginLeft: '0.5rem'
+                            }}
+                          >
+                            {ghtkStatusInfo?.label || ghtkStatus}
+                          </Badge>
+                        </div>
+                      )}
+                      {order.tracking_code && (
+                        <div className="info-item" style={{ marginBottom: '0.75rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Mã vận đơn:</strong>
+                          <div style={{ fontSize: '0.9rem', color: '#666', fontFamily: 'monospace', marginTop: '0.25rem' }}>
+                            {order.tracking_code}
+                          </div>
+                        </div>
+                      )}
+                      {ghtkOrder.tracking_url && (
+                        <div className="info-item" style={{ marginBottom: '0.75rem' }}>
+                          <a 
+                            href={ghtkOrder.tracking_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: '0.9rem',
+                              color: '#007bff',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            <FaTruck /> Theo dõi đơn hàng
+                          </a>
+                        </div>
+                      )}
+                      {ghtkOrder.order_code && (
+                        <div className="info-item" style={{ marginBottom: '0.75rem' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>Mã đơn GHTK:</strong>
+                          <div style={{ fontSize: '0.9rem', color: '#666', fontFamily: 'monospace', marginTop: '0.25rem' }}>
+                            {ghtkOrder.order_code}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <hr />
 
                 <div className="order-summary">
@@ -441,13 +670,76 @@ export default function OrderDetail() {
 
                 {order.status === 'cancelled' && (
                   <div className="order-cancel-note">
-                    Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.
+                    {(() => {
+                      // COD: Không hiển thị thông báo hoàn tiền (vì chưa thanh toán)
+                      // Bank transfer/Momo: Hiển thị thông báo hoàn tiền (vì đã thanh toán)
+                      const shouldShowRefund = order.payment_method && 
+                                               order.payment_method !== 'cod';
+                      
+                      if (shouldShowRefund) {
+                        return 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.';
+                      }
+                      return 'Đơn hàng đã được hủy.';
+                    })()}
                   </div>
                 )}
               </Card.Body>
             </Card>
           </Col>
         </Row>
+
+        {/* Return Request Modal */}
+        <Modal show={showReturnModal} onHide={() => setShowReturnModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>Yêu cầu đổi/trả hàng</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Loại yêu cầu <span style={{ color: 'red' }}>*</span></Form.Label>
+                <Form.Select value={returnType} onChange={(e) => setReturnType(e.target.value)}>
+                  <option value="refund">Hoàn tiền</option>
+                  <option value="exchange">Đổi hàng</option>
+                </Form.Select>
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Lý do <span style={{ color: 'red' }}>*</span></Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  placeholder="Vui lòng mô tả lý do bạn muốn đổi/trả hàng..."
+                  required
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Ghi chú thêm (tùy chọn)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={returnNote}
+                  onChange={(e) => setReturnNote(e.target.value)}
+                  placeholder="Thêm thông tin chi tiết nếu cần..."
+                />
+              </Form.Group>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowReturnModal(false)}>
+              Hủy
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleSubmitReturnRequest}
+              disabled={submittingReturn || !returnReason.trim()}
+            >
+              {submittingReturn ? 'Đang gửi...' : 'Gửi yêu cầu'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
       <Footer />
     </div>

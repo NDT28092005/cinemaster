@@ -40,4 +40,10 @@ return [
         'token' => env('GHTK_TOKEN'),
         'client_source' => env('GHTK_CLIENT_SOURCE', ''),
     ],
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+    'stability' => [
+        'key' => env('STABILITY_AI_API_KEY'),
+    ],
 ];
