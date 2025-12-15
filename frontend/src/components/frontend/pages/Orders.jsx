@@ -415,7 +415,7 @@ export default function Orders() {
 
                     {order.status === 'cancelled' && (
                       <div className="order-cancel-note">
-                        Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.
+                        Đơn hàng đã được hủy.
                       </div>
                     )}
                   </Card.Body>

@@ -26,7 +26,8 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PromotionUsageController;
 use App\Http\Controllers\Api\GiftOptionController;
 use App\Http\Controllers\Api\ShippingController;
-
+use App\Http\Controllers\Api\GiftPreviewController;
+use App\Http\Controllers\Api\ReturnController;
 Route::middleware('auth:sanctum')->group(function () {
     // Product chatbot endpoints với auth
     Route::post('/chat/product-chatbot/start', [ChatController::class, 'startProductChat']);
@@ -35,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Product chatbot - public endpoint (có thể thêm auth nếu cần)
+Route::post('/gift/preview', [GiftPreviewController::class, 'preview']);
 Route::post('/chat/product-advice', [ChatController::class, 'productAdvice']);
 Route::get('/ghtk/check/{label}', function($label, App\Services\GHTKService $ghtk) {
     return $ghtk->getOrderStatus($label);
@@ -167,6 +169,23 @@ Route::post('/shipping/calc', [ShippingController::class, 'calc']);
 Route::get('/gift-options/wrapping-papers', [GiftOptionController::class, 'getWrappingPapers']);
 Route::get('/gift-options/decorative-accessories', [GiftOptionController::class, 'getDecorativeAccessories']);
 Route::get('/gift-options/card-types', [GiftOptionController::class, 'getCardTypes']);
+
+// Return Requests - User endpoints
+Route::middleware('auth:sanctum')->prefix('returns')->group(function () {
+    Route::get('/', [ReturnController::class, 'index']); // Lấy danh sách return requests của user
+    Route::post('/', [ReturnController::class, 'store']); // Tạo return request mới
+    Route::get('/{id}', [ReturnController::class, 'show']); // Xem chi tiết return request
+});
+
+// Return Requests - Admin endpoints
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/returns')->group(function () {
+    Route::get('/', [ReturnController::class, 'adminIndex']); // Danh sách tất cả return requests
+    Route::get('/{id}', [ReturnController::class, 'show']); // Chi tiết return request
+    Route::post('/{id}/approve', [ReturnController::class, 'approve']); // Duyệt yêu cầu
+    Route::post('/{id}/reject', [ReturnController::class, 'reject']); // Từ chối yêu cầu
+    Route::post('/{id}/received', [ReturnController::class, 'received']); // Xác nhận đã nhận hàng hoàn
+    Route::post('/{id}/refund', [ReturnController::class, 'refund']); // Hoàn tiền
+});
 
 // Gift Options - Admin endpoints
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/gift-options')->group(function () {

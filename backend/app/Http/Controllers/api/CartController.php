@@ -153,6 +153,7 @@ class CartController extends Controller
             'card_note'        => 'nullable|string|max:1000',
             'loyalty_points_used' => 'nullable|integer|min:0',
             'print_label'      => 'nullable|boolean',
+            'shipping_fee'     => 'nullable|numeric|min:0',
         ]);
 
         $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
@@ -192,6 +193,52 @@ class CartController extends Controller
             }
             
             // Tính tổng tiền sau khi giảm
+            $shippingFee = $validated['shipping_fee'] ?? 0;
+            
+            // Nếu shipping_fee = 0 hoặc không có, tính lại từ GHTK
+            if ($shippingFee == 0 && !empty($validated['customer_province']) && !empty($validated['customer_district']) && !empty($validated['delivery_address'])) {
+                try {
+                    // Tính trọng lượng từ giỏ hàng
+                    $totalWeight = $cartItems->sum(function($item) {
+                        return ($item->product->weight_in_gram ?? 200) * $item->quantity;
+                    });
+                    if ($totalWeight <= 0) $totalWeight = 500;
+                    
+                    // Gọi API tính phí ship từ GHTK
+                    $shippingResponse = \Illuminate\Support\Facades\Http::timeout(10)
+                        ->withHeaders(['Token' => config('services.ghtk.token')])
+                        ->get('https://services.giaohangtietkiem.vn/services/shipment/fee', [
+                            'address' => $validated['delivery_address'],
+                            'province' => $validated['customer_province'],
+                            'district' => $validated['customer_district'],
+                            'ward' => $validated['customer_ward'] ?? '',
+                            'weight' => $totalWeight,
+                            'value' => $total,
+                            'pick_province' => 'Bình Dương',
+                            'pick_district' => 'Dĩ An',
+                            'pick_ward' => 'Đông Hòa',
+                            'pick_street' => 'Ký túc xá Khu B',
+                            'pick_tel' => '0946403788',
+                        ]);
+                    
+                    if ($shippingResponse->successful()) {
+                        $shippingData = $shippingResponse->json();
+                        if (isset($shippingData['success']) && $shippingData['success'] && isset($shippingData['fee']['fee'])) {
+                            $shippingFee = (float) $shippingData['fee']['fee'];
+                            \Log::info('Recalculated shipping fee from GHTK', [
+                                'order_id' => 'pending',
+                                'shipping_fee' => $shippingFee
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to recalculate shipping fee from GHTK', [
+                        'error' => $e->getMessage()
+                    ]);
+                    // Giữ nguyên shipping_fee = 0 hoặc giá trị từ request
+                }
+            }
+            
             $finalTotal = max(0, $total - $discountAmount);
             // Trừ số lượng quà tặng nếu có
             if (isset($validated['wrapping_paper_id']) && $validated['wrapping_paper_id']) {
@@ -248,10 +295,12 @@ class CartController extends Controller
                 'card_type'         => $validated['card_type'] ?? null,
                 'card_note'         => $validated['card_note'] ?? null,
                 'total_amount'      => $finalTotal,
+                'shipping_fee'       => $shippingFee,
                 'loyalty_points_used' => $loyaltyPointsUsed,
                 'print_label'       => $printLabel,
-                'status'            => 'pending',
-                'expires_at'        => now()->addMinutes(5), // hết hạn 5 phút
+                'payment_method'    => $validated['payment_method'],
+                'status'            => 'pending', // COD và các phương thức khác đều là pending
+                'expires_at'        => $validated['payment_method'] === 'cod' ? null : now()->addMinutes(5), // COD không có thời hạn thanh toán
             ]);
 
             foreach ($cartItems as $item) {
@@ -263,6 +312,34 @@ class CartController extends Controller
                 ]);
             }
 
+            // Xóa giỏ hàng sau khi tạo order thành công
+            Cart::where('user_id', $user->id)->delete();
+
+            // Refresh order để load items
+            $order->refresh();
+            $order->load('items.product');
+
+            // Nếu là COD, tạo đơn GHTK ngay lập tức
+            if ($validated['payment_method'] === 'cod') {
+                try {
+                    $ghtkService = app(\App\Services\GHTKService::class);
+                    $ghtkOrder = $ghtkService->createShipment($order);
+                    
+                    \Log::info("GHTK order created for COD", [
+                        'order_id' => $order->id,
+                        'ghtk_order_id' => $ghtkOrder->id ?? null,
+                        'label_id' => $ghtkOrder->label_id ?? null
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error("Failed to create GHTK order for COD", [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Không throw error, vẫn cho phép tạo order thành công
+                    // Admin có thể tạo GHTK order sau
+                }
+            }
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -272,30 +349,98 @@ class CartController extends Controller
             ], 500);
         }
 
-        // Tạo mã QR thanh toán
-        $bankCode = "ACB";
-        $accountNo = "22751921";
-        $accountName = "NGUYEN DAI TUNG";
-        $amountInt = intval($finalTotal);
-        $randomSuffix = strtoupper(Str::random(6));
-        $addInfo = "Order{$order->id}{$randomSuffix}";
-        $qrUrl = "https://img.vietqr.io/image/{$bankCode}-{$accountNo}-compact2.png"
-            . "?amount={$amountInt}&addInfo=" . urlencode($addInfo)
-            . "&accountName=" . urlencode($accountName);
-
+        // Tính tổng tiền thanh toán: giá trị đơn hàng - điểm thưởng + phí ship
+        $totalWithShipping = $finalTotal + $shippingFee;
+        
         // Lấy lại user để trả về điểm mới nhất
         $user->refresh();
         
-        return response()->json([
-            'message'  => 'Tạo mã thanh toán thành công',
-            'order_id' => $order->id,
-            'amount'   => $amountInt,
-            'addInfo'  => $addInfo,
-            'qr_code'  => $qrUrl,
-            'loyalty_points_used' => $loyaltyPointsUsed,
-            'discount_amount' => $discountAmount,
-            'remaining_loyalty_points' => $user->loyalty_points ?? 0,
-        ]);
+        // Xử lý theo payment method
+        $paymentMethod = $validated['payment_method'];
+        
+        if ($paymentMethod === 'cod') {
+            // COD: Không tạo QR code, chỉ thông báo thành công
+            $responseData = [
+                'message'  => 'Đơn hàng đã được tạo thành công! Bạn sẽ thanh toán khi nhận hàng.',
+                'order_id' => $order->id,
+                'payment_method' => 'cod',
+                'loyalty_points_used' => $loyaltyPointsUsed,
+                'discount_amount' => $discountAmount,
+                'shipping_fee' => $shippingFee,
+                'total_amount' => $finalTotal,
+                'total_with_shipping' => $totalWithShipping,
+                'remaining_loyalty_points' => $user->loyalty_points ?? 0,
+                'qr_code' => null, // Không có QR code cho COD
+                'amount' => $totalWithShipping, // Số tiền cần thanh toán khi nhận hàng
+            ];
+            
+            \Log::info("COD checkout completed", [
+                'order_id' => $order->id,
+                'total_with_shipping' => $totalWithShipping,
+                'shipping_fee' => $shippingFee
+            ]);
+        } else {
+            // Bank transfer hoặc Momo: Tạo QR code
+            $bankCode = "ACB";
+            $accountNo = "22751921";
+            $accountName = "NGUYEN DAI TUNG";
+            
+            $amountInt = intval($totalWithShipping);
+            
+            // Đảm bảo amount > 0
+            if ($amountInt <= 0) {
+                \Log::error("Invalid amount for QR code", [
+                    'order_id' => $order->id,
+                    'final_total' => $finalTotal,
+                    'shipping_fee' => $shippingFee,
+                    'total_with_shipping' => $totalWithShipping
+                ]);
+                $amountInt = max(1000, $finalTotal); // Tối thiểu 1000 VND
+            }
+            
+            \Log::info("Checkout amount calculation", [
+                'order_id' => $order->id,
+                'payment_method' => $paymentMethod,
+                'cart_total' => $total,
+                'discount_amount' => $discountAmount,
+                'final_total' => $finalTotal,
+                'shipping_fee' => $shippingFee,
+                'shipping_fee_from_request' => $validated['shipping_fee'] ?? 'not_provided',
+                'total_with_shipping' => $totalWithShipping,
+                'amount_int' => $amountInt,
+            ]);
+            
+            $randomSuffix = strtoupper(Str::random(6));
+            $addInfo = "Order{$order->id}{$randomSuffix}";
+            $qrUrl = "https://img.vietqr.io/image/{$bankCode}-{$accountNo}-compact2.png"
+                . "?amount={$amountInt}&addInfo=" . urlencode($addInfo)
+                . "&accountName=" . urlencode($accountName);
+
+            $responseData = [
+                'message'  => 'Tạo mã thanh toán thành công',
+                'order_id' => $order->id,
+                'payment_method' => $paymentMethod,
+                'amount'   => $amountInt, // Số tiền trong QR code (đã bao gồm shipping)
+                'addInfo'  => $addInfo,
+                'qr_code'  => $qrUrl,
+                'loyalty_points_used' => $loyaltyPointsUsed,
+                'discount_amount' => $discountAmount,
+                'shipping_fee' => $shippingFee, // Phí ship từ GHTK
+                'total_amount' => $finalTotal, // Tổng tiền sản phẩm (sau giảm điểm)
+                'total_with_shipping' => $totalWithShipping, // Tổng tiền cần thanh toán (bao gồm ship)
+                'remaining_loyalty_points' => $user->loyalty_points ?? 0,
+            ];
+            
+            \Log::info("Checkout response data", [
+                'order_id' => $order->id,
+                'payment_method' => $paymentMethod,
+                'response_amount' => $responseData['amount'],
+                'response_total_with_shipping' => $responseData['total_with_shipping'],
+                'response_shipping_fee' => $responseData['shipping_fee']
+            ]);
+        }
+        
+        return response()->json($responseData);
     }
 
     /**

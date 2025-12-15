@@ -57,6 +57,9 @@ export default function Checkout() {
   const [printLabel, setPrintLabel] = useState(false);
   const [shippingFee, setShippingFee] = useState(0);
   const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [giftPreview, setGiftPreview] = useState(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -117,7 +120,7 @@ export default function Checkout() {
       const timer = setTimeout(() => {
         calculateShippingFee(customerProvince, customerDistrict, customerWard, deliveryAddress);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     } else if (!customerProvince || !customerDistrict || !deliveryAddress) {
       setShippingFee(0);
@@ -175,7 +178,56 @@ export default function Checkout() {
       console.error('Error response:', error.response?.data);
     }
   };
+  useEffect(() => {
+    // Chỉ gọi khi chọn đủ 3
+    if (!wrappingPaperId || !decorativeAccessoryId || !cardTypeId) {
+      setGiftPreview(null);
+      setPreviewError(null);
+      setGeneratingPreview(false);
+      return;
+    }
 
+    const generatePreview = async () => {
+      setGeneratingPreview(true);
+      setPreviewError(null);
+      setGiftPreview(null);
+
+      try {
+        const res = await axios.post(
+          "http://localhost:8000/api/gift/preview",
+          {
+            wrapping_paper_id: parseInt(wrappingPaperId),
+            decorative_accessory_id: parseInt(decorativeAccessoryId),
+            card_type_id: parseInt(cardTypeId),
+          },
+          {
+            timeout: 30000, // 30 seconds timeout
+          }
+        );
+
+        if (res.data.success && res.data.image_url) {
+          setGiftPreview(res.data.image_url);
+          setPreviewError(null);
+        } else {
+          throw new Error(res.data.message || 'Không thể tạo preview');
+        }
+      } catch (err) {
+        console.error("❌ Lỗi tạo preview quà:", err);
+        const errorMessage = err.response?.data?.message 
+          || err.message 
+          || 'Không thể tạo preview quà tặng. Vui lòng thử lại sau.';
+        setPreviewError(errorMessage);
+        setGiftPreview(null);
+      } finally {
+        setGeneratingPreview(false);
+      }
+    };
+
+    // debounce nhẹ để tránh gọi API quá nhiều
+    const timer = setTimeout(generatePreview, 800);
+    return () => clearTimeout(timer);
+
+  }, [wrappingPaperId, decorativeAccessoryId, cardTypeId]);
   // Refresh addresses khi quay lại từ AddAddress
   useEffect(() => {
     if (location.state?.fromAddAddress) {
@@ -272,7 +324,7 @@ export default function Checkout() {
     setCustomerDistrict(district);
     setCustomerWard(ward);
     setShowAddressModal(false);
-    
+
     // Tính phí ship khi chọn địa chỉ
     calculateShippingFee(province, district, ward, fullAddress);
   };
@@ -320,6 +372,17 @@ export default function Checkout() {
     setError(null);
 
     try {
+      // Đảm bảo shipping fee đã được tính từ GHTK
+      if (customerProvince && customerDistrict && deliveryAddress && cart?.items?.length > 0) {
+        // Nếu đang tính hoặc chưa có shipping fee, tính lại
+        if (calculatingShipping || !shippingFee || shippingFee === 0) {
+          console.log('Tính lại shipping fee trước khi checkout...');
+          await calculateShippingFee(customerProvince, customerDistrict, customerWard, deliveryAddress);
+          // Đợi một chút để state cập nhật
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
       // Chuẩn bị dữ liệu gửi đi
       const checkoutData = {
         delivery_address: deliveryAddress.trim(),
@@ -359,13 +422,18 @@ export default function Checkout() {
       }
       // Đảm bảo print_label luôn là boolean
       checkoutData.print_label = Boolean(printLabel);
-      // Thêm phí vận chuyển
-      checkoutData.shipping_fee = Number(shippingFee) || 0;
+      // Thêm phí vận chuyển - Đảm bảo có giá trị từ GHTK
+      const finalShippingFee = Number(shippingFee) || 0;
+      checkoutData.shipping_fee = finalShippingFee;
+      
+      console.log('Checkout data - Shipping fee:', finalShippingFee, 'from state:', shippingFee);
       // Thêm điểm thưởng sử dụng
       if (loyaltyPointsUsed > 0) {
         checkoutData.loyalty_points_used = loyaltyPointsUsed;
       }
-
+      if (giftPreview) {
+        checkoutData.gift_preview_image = giftPreview;
+      }
       console.log("Sending checkout data:", checkoutData);
 
       const res = await axios.post(
@@ -386,21 +454,72 @@ export default function Checkout() {
         throw new Error("Không nhận được dữ liệu từ server");
       }
 
-      if (!res.data.qr_code) {
-        console.warn("QR code không có trong response:", res.data);
-      }
-
-      setQrCode(res.data.qr_code || "");
-      setAmount(Number(res.data.amount) || 0);
-      setTransferContent(res.data.addInfo || "");
-      setOrderId(res.data.order_id || null);
-      setPaymentStatus("pending");
-      setTimeLeft(5 * 60); // 5 phút countdown
-      setSubmitting(false);
+      const isCOD = paymentMethod === 'cod';
+      const responseAmount = res.data.total_with_shipping || res.data.amount || 0;
+      const finalAmount = Number(responseAmount);
       
+      console.log("Checkout response processing:", {
+        payment_method: paymentMethod,
+        isCOD: isCOD,
+        has_qr_code: !!res.data.qr_code,
+        total_with_shipping: res.data.total_with_shipping,
+        amount: res.data.amount,
+        shipping_fee: res.data.shipping_fee,
+        total_amount: res.data.total_amount,
+        finalAmount: finalAmount
+      });
+
+      setOrderId(res.data.order_id || null);
+      setSubmitting(false);
+
       // Cập nhật shipping fee từ response nếu có
       if (res.data.shipping_fee !== undefined) {
-        setShippingFee(res.data.shipping_fee);
+        const responseShippingFee = Number(res.data.shipping_fee) || 0;
+        setShippingFee(responseShippingFee);
+        console.log("Updated shipping fee from response:", responseShippingFee);
+      }
+
+      // Xử lý theo payment method
+      if (isCOD) {
+        // COD: Không hiển thị QR, chỉ thông báo thành công
+        setQrCode(""); // Không có QR code
+        setAmount(finalAmount);
+        setTransferContent("");
+        setPaymentStatus("pending");
+        setTimeLeft(0); // Không có countdown cho COD
+        
+        // Xóa giỏ hàng sau khi COD thành công
+        try {
+          await fetch("http://localhost:8000/api/cart/clear-cart", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${currentToken}`,
+            },
+          });
+          console.log("Cart cleared after COD order");
+        } catch (err) {
+          console.error("Error clearing cart:", err);
+        }
+        
+        // Thông báo thành công
+        alert(`✅ Đơn hàng #${res.data.order_id} đã được tạo thành công!\n\nTổng tiền: ${formatPrice(finalAmount)}\nBạn sẽ thanh toán khi nhận hàng.\n\nĐơn hàng đang ở trạng thái: Chờ thanh toán`);
+        
+        // Chuyển đến trang đơn hàng sau 2 giây
+        setTimeout(() => {
+          navigate(`/orders/${res.data.order_id}`);
+        }, 2000);
+      } else {
+        // Bank transfer hoặc Momo: Hiển thị QR code
+        if (!res.data.qr_code) {
+          console.warn("QR code không có trong response:", res.data);
+        }
+
+        setQrCode(res.data.qr_code || "");
+        setAmount(finalAmount);
+        setTransferContent(res.data.addInfo || "");
+        setPaymentStatus("pending");
+        setTimeLeft(5 * 60); // 5 phút countdown
       }
 
       // Cập nhật lại số điểm sau khi sử dụng
@@ -889,6 +1008,70 @@ export default function Checkout() {
                               <Form.Text className="text-muted character-count">
                                 {cardNote.length}/500 ký tự
                               </Form.Text>
+                              
+                              {/* AI Gift Preview Section */}
+                              {(wrappingPaperId && decorativeAccessoryId && cardTypeId) && (
+                                <div className="ai-gift-preview-section">
+                                  {generatingPreview && (
+                                    <div className="ai-gift-preview-loading">
+                                      <div className="preview-spinner"></div>
+                                      <p>Đang tạo preview quà tặng...</p>
+                                    </div>
+                                  )}
+                                  
+                                  {previewError && !generatingPreview && (
+                                    <div className="ai-gift-preview-error">
+                                      <p>⚠️ {previewError}</p>
+                                      <Button
+                                        variant="outline-primary"
+                                        size="sm"
+                                        onClick={() => {
+                                          // Trigger regeneration by resetting and setting again
+                                          const wp = wrappingPaperId;
+                                          const da = decorativeAccessoryId;
+                                          const ct = cardTypeId;
+                                          setWrappingPaperId('');
+                                          setDecorativeAccessoryId('');
+                                          setCardTypeId('');
+                                          setTimeout(() => {
+                                            setWrappingPaperId(wp);
+                                            setDecorativeAccessoryId(da);
+                                            setCardTypeId(ct);
+                                          }, 100);
+                                        }}
+                                      >
+                                        Thử lại
+                                      </Button>
+                                    </div>
+                                  )}
+                                  
+                                  {giftPreview && !generatingPreview && (
+                                    <div className="ai-gift-preview-container">
+                                      <h4 className="ai-gift-preview-title">
+                                        🎁 Xem trước gói quà (AI)
+                                      </h4>
+
+                                      <div className="ai-gift-preview-image-wrapper">
+                                        <img
+                                          src={giftPreview}
+                                          alt="AI Gift Preview"
+                                          className="ai-gift-preview-image"
+                                          onError={(e) => {
+                                            e.target.onerror = null;
+                                            setPreviewError('Không thể tải hình ảnh preview');
+                                            setGiftPreview(null);
+                                          }}
+                                        />
+                                      </div>
+
+                                      <div className="ai-gift-preview-note">
+                                        * Hình ảnh được AI tạo dựa trên lựa chọn của bạn (giấy gói, phụ kiện, thiệp).
+                                        Sản phẩm thực tế có thể chênh lệch nhỏ.
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </Form.Group>
                           </Col>
                         </Row>
@@ -1089,8 +1272,8 @@ export default function Checkout() {
               </Card.Body>
             </Card>
 
-            {/* QR Code Modal Overlay */}
-            {qrCode && (
+            {/* QR Code Modal Overlay - Chỉ hiển thị khi không phải COD */}
+            {qrCode && paymentMethod !== 'cod' && (
               <div
                 className="qr-modal-overlay"
                 onClick={(e) => {

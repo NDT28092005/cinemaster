@@ -265,6 +265,21 @@ class OrderController extends Controller
             $order->refresh();
         }
 
+        // Tự động sync GHTK status nếu có ghtkOrder
+        if ($order->ghtkOrder && $order->ghtkOrder->label_id) {
+            try {
+                $ghtkService = app(\App\Services\GHTKService::class);
+                $ghtkService->syncOrderStatus($order->ghtkOrder);
+                $order->refresh();
+                // Load lại tất cả relationships sau khi refresh
+                $order->load(['user', 'items.product.images', 'payment', 'ghtkOrder']);
+            } catch (\Exception $e) {
+                \Log::warning("Failed to sync GHTK status for order {$order->id}", [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         return response()->json($order);
     }
 
@@ -500,11 +515,22 @@ class OrderController extends Controller
             ], 500);
         }
 
-        // Load lại order với các relationships (không load payment nếu không cần)
-        $order->load(['items.product.images']);
+        // Load lại order với các relationships bao gồm images
+        $order->load(['items.product.images', 'user', 'ghtkOrder']);
+
+        // Xác định message dựa trên payment_method
+        // COD: Không hiển thị thông báo hoàn tiền (vì chưa thanh toán)
+        // Bank transfer/Momo: Hiển thị thông báo hoàn tiền (vì đã thanh toán)
+        $message = 'Đơn hàng đã được hủy.';
+        
+        // Chỉ hiển thị thông báo hoàn tiền nếu không phải COD
+        // (vì bank_transfer và momo đều đã thanh toán trước)
+        if ($order->payment_method && $order->payment_method !== 'cod') {
+            $message = 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.';
+        }
 
         return response()->json([
-            'message' => 'Đơn hàng đã được hủy. Chúng tôi sẽ hoàn tiền lại trong vòng 24 giờ.',
+            'message' => $message,
             'order' => $order
         ]);
     }

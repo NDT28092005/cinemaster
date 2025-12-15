@@ -61,6 +61,25 @@ class Order extends Model
     {
         return $this->hasOne(GhtkOrder::class);
     }
+    public function wrappingPaper()
+    {
+        return $this->belongsTo(WrappingPaper::class);
+    }
+
+    public function decorativeAccessory()
+    {
+        return $this->belongsTo(DecorativeAccessory::class);
+    }
+
+    public function cardType()
+    {
+        return $this->belongsTo(CardType::class);
+    }
+
+    public function returnRequests()
+    {
+        return $this->hasMany(ReturnRequest::class);
+    }
 
     /**
      * Sync tracking_code từ ghtk_orders.label_id
