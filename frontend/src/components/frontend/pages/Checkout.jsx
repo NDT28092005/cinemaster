@@ -11,7 +11,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Badge from "react-bootstrap/Badge";
-import { FaCheckCircle, FaClock, FaTimesCircle, FaArrowLeft, FaCreditCard, FaMapMarkerAlt, FaPlus, FaStar } from "react-icons/fa";
+import { FaCheckCircle, FaClock, FaTimesCircle, FaArrowLeft, FaCreditCard, FaMapMarkerAlt, FaPlus, FaStar, FaEdit, FaTrash } from "react-icons/fa";
 import '../../../assets/css/_checkout.scss';
 
 export default function Checkout() {
@@ -39,6 +39,20 @@ export default function Checkout() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'Việt Nam',
+    is_default: false
+  });
+  const [savingAddress, setSavingAddress] = useState(false);
   const [wrappingPaperId, setWrappingPaperId] = useState("");
   const [wrappingPaper, setWrappingPaper] = useState("");
   const [wrappingPaperImage, setWrappingPaperImage] = useState("");
@@ -340,6 +354,98 @@ export default function Checkout() {
       address.country
     ].filter(Boolean);
     return parts.join(", ");
+  };
+
+  // Mở modal sửa địa chỉ
+  const handleEditAddress = (address, e) => {
+    e.stopPropagation(); // Ngăn chặn select address khi click vào nút sửa
+    setEditingAddress(address);
+    setEditForm({
+      address_line1: address.address_line1 || '',
+      address_line2: address.address_line2 || '',
+      city: address.city || '',
+      state: address.state || '',
+      postal_code: address.postal_code || '',
+      country: address.country || 'Việt Nam',
+      is_default: address.is_default || false
+    });
+    setShowEditModal(true);
+  };
+
+  // Xử lý sửa địa chỉ
+  const handleSaveEditAddress = async () => {
+    if (!editingAddress) return;
+
+    setSavingAddress(true);
+    try {
+      const currentToken = token || localStorage.getItem("token");
+      const userId = user?.id || localStorage.getItem("userId");
+
+      if (!currentToken || !userId) {
+        alert("Vui lòng đăng nhập");
+        return;
+      }
+
+      const addressId = editingAddress.address_id || editingAddress.id;
+      await axios.put(
+        `http://localhost:8000/api/users/${userId}/addresses/${addressId}`,
+        editForm,
+        { headers: { Authorization: `Bearer ${currentToken}` } }
+      );
+
+      // Refresh danh sách địa chỉ
+      await fetchAddresses();
+      setShowEditModal(false);
+      setEditingAddress(null);
+    } catch (err) {
+      console.error("Edit address error:", err);
+      alert("Lỗi khi sửa địa chỉ: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  // Mở dialog xác nhận xóa
+  const handleDeleteAddress = (address, e) => {
+    e.stopPropagation(); // Ngăn chặn select address khi click vào nút xóa
+    const addressId = address.address_id || address.id;
+    setDeletingAddressId(addressId);
+    setShowDeleteConfirm(true);
+  };
+
+  // Xác nhận xóa địa chỉ
+  const confirmDeleteAddress = async () => {
+    if (!deletingAddressId) return;
+
+    try {
+      const currentToken = token || localStorage.getItem("token");
+      const userId = user?.id || localStorage.getItem("userId");
+
+      if (!currentToken || !userId) {
+        alert("Vui lòng đăng nhập");
+        return;
+      }
+
+      await axios.delete(
+        `http://localhost:8000/api/users/${userId}/addresses/${deletingAddressId}`,
+        { headers: { Authorization: `Bearer ${currentToken}` } }
+      );
+
+      // Refresh danh sách địa chỉ
+      await fetchAddresses();
+      
+      // Nếu địa chỉ đang chọn bị xóa, bỏ chọn
+      if (selectedAddress && (selectedAddress.address_id === deletingAddressId || selectedAddress.id === deletingAddressId)) {
+        setSelectedAddress(null);
+        setDeliveryAddress("");
+      }
+
+      setShowDeleteConfirm(false);
+      setDeletingAddressId(null);
+    } catch (err) {
+      console.error("Delete address error:", err);
+      alert("Lỗi khi xóa địa chỉ: " + (err.response?.data?.message || err.message));
+    }
   };
 
   // Thanh toán
@@ -1423,10 +1529,9 @@ export default function Checkout() {
                   {addresses.map((address) => (
                     <div
                       key={address.address_id || address.id}
-                      onClick={() => selectAddress(address)}
                       className={`address-item ${selectedAddress?.address_id === address.address_id || selectedAddress?.id === address.id ? 'selected' : ''}`}
                     >
-                      <div className="address-item-content">
+                      <div className="address-item-content" onClick={() => selectAddress(address)}>
                         <input
                           type="radio"
                           name="selectedAddress"
@@ -1449,6 +1554,26 @@ export default function Checkout() {
                             {formatAddress(address)}
                           </div>
                         </div>
+                      </div>
+                      <div className="address-item-actions" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={(e) => handleEditAddress(address, e)}
+                          className="address-edit-button"
+                          title="Sửa địa chỉ"
+                        >
+                          <FaEdit />
+                        </Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={(e) => handleDeleteAddress(address, e)}
+                          className="address-delete-button"
+                          title="Xóa địa chỉ"
+                        >
+                          <FaTrash />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1473,6 +1598,220 @@ export default function Checkout() {
               >
                 <FaPlus className="me-2" />
                 Thêm Địa Chỉ Mới
+              </Button>
+            </Card.Footer>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal sửa địa chỉ */}
+      {showEditModal && (
+        <div
+          className="address-modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditModal(false);
+              setEditingAddress(null);
+            }
+          }}
+        >
+          <Card
+            className="address-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px' }}
+          >
+            <Card.Header className="address-modal-header">
+              <h3 className="address-modal-title">
+                Sửa Địa Chỉ
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingAddress(null);
+                }}
+                className="address-modal-close"
+              >
+                ×
+              </button>
+            </Card.Header>
+
+            <Card.Body className="address-modal-body">
+              <Form>
+                <Row>
+                  <Col xs={12}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        Địa chỉ chi tiết <span style={{ color: '#FB6376' }}>*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ví dụ: Số 123, Đường ABC"
+                        value={editForm.address_line1}
+                        onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={12}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        Phường/Xã <span style={{ color: '#FB6376' }}>*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ví dụ: Phường 1, Phường Hải Châu"
+                        value={editForm.address_line2}
+                        onChange={(e) => setEditForm({ ...editForm, address_line2: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        Tỉnh <span style={{ color: '#FB6376' }}>*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ví dụ: Đà Nẵng"
+                        value={editForm.state}
+                        onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        Thành phố <span style={{ color: '#FB6376' }}>*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ví dụ: Quận Hải Châu"
+                        value={editForm.city}
+                        onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Mã bưu điện</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Ví dụ: 550000"
+                        value={editForm.postal_code}
+                        onChange={(e) => setEditForm({ ...editForm, postal_code: e.target.value })}
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        Quốc gia <span style={{ color: '#FB6376' }}>*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={editForm.country}
+                        onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={12}>
+                    <Form.Group className="mb-3">
+                      <Form.Check
+                        type="checkbox"
+                        label="Đặt làm địa chỉ mặc định"
+                        checked={editForm.is_default}
+                        onChange={(e) => setEditForm({ ...editForm, is_default: e.target.checked })}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Form>
+            </Card.Body>
+
+            <Card.Footer className="address-modal-footer">
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingAddress(null);
+                }}
+                className="address-modal-cancel-button"
+              >
+                Hủy
+              </Button>
+              <Button
+                className="btn-book"
+                onClick={handleSaveEditAddress}
+                disabled={savingAddress}
+              >
+                {savingAddress ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </Card.Footer>
+          </Card>
+        </div>
+      )}
+
+      {/* Dialog xác nhận xóa */}
+      {showDeleteConfirm && (
+        <div
+          className="address-modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteConfirm(false);
+              setDeletingAddressId(null);
+            }
+          }}
+        >
+          <Card
+            className="address-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '400px' }}
+          >
+            <Card.Header className="address-modal-header">
+              <h3 className="address-modal-title">
+                Xác nhận xóa
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingAddressId(null);
+                }}
+                className="address-modal-close"
+              >
+                ×
+              </button>
+            </Card.Header>
+
+            <Card.Body className="address-modal-body">
+              <p>Bạn có chắc chắn muốn xóa địa chỉ này không?</p>
+            </Card.Body>
+
+            <Card.Footer className="address-modal-footer">
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingAddressId(null);
+                }}
+                className="address-modal-cancel-button"
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="danger"
+                onClick={confirmDeleteAddress}
+              >
+                Xóa
               </Button>
             </Card.Footer>
           </Card>

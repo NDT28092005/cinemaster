@@ -6,6 +6,7 @@ import { getProducts } from '../../api/product';
 import { getCategories } from '../../api/category';
 import PosterSlider from './PosterSlider';
 import HeroSlider from './HeroSlider';
+import { FaEnvelope, FaUser, FaPhone, FaComment } from 'react-icons/fa';
 
 // Fallback images cho categories
 const CATEGORY_FALLBACK_IMAGES = [
@@ -23,49 +24,6 @@ const BRAND_STRIP = ['Birthday', 'Anniversary', 'Corporate', 'Holiday', 'Handmad
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=60';
 
-// Hero Slider Data - Có thể thêm nhiều slide ở đây
-const HERO_SLIDES = [
-    {
-        id: 1,
-        title: 'TÌM MÓN QUÀ PHÙ HỢP VỚI PHONG CÁCH CỦA BẠN',
-        description: 'Khám phá bộ sưu tập quà tặng đa dạng với hơn 2.000 sản phẩm chất lượng cao. Từ những món quà tinh tế đến set quà sang trọng, chúng tôi có tất cả những gì bạn cần để tạo nên những khoảnh khắc đáng nhớ.',
-        ctaText: 'Mua sắm ngay',
-        ctaLink: '/products',
-        image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
-        stats: [
-            { value: '200+', label: 'Thương hiệu quốc tế' },
-            { value: '2.000+', label: 'Sản phẩm chất lượng cao' },
-            { value: '30.000+', label: 'Khách hàng hài lòng' }
-        ]
-    },
-    {
-        id: 2,
-        title: 'QUÀ TẶNG CHO MỌI DỊP ĐẶC BIỆT',
-        description: 'Từ sinh nhật, kỷ niệm đến các ngày lễ quan trọng, chúng tôi mang đến những món quà ý nghĩa và tinh tế nhất. Mỗi sản phẩm được chọn lọc kỹ lưỡng để thể hiện tình cảm chân thành của bạn.',
-        ctaText: 'Khám phá ngay',
-        ctaLink: '/products',
-        image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80',
-        stats: [
-            { value: '500+', label: 'Mẫu quà độc đáo' },
-            { value: '24/7', label: 'Hỗ trợ khách hàng' },
-            { value: '100%', label: 'Hài lòng chất lượng' }
-        ]
-    },
-    {
-        id: 3,
-        title: 'SET QUÀ SANG TRỌNG VÀ TINH TẾ',
-        description: 'Bộ sưu tập set quà cao cấp được thiết kế tỉ mỉ, phù hợp cho những dịp đặc biệt. Mỗi set quà là sự kết hợp hoàn hảo giữa chất lượng và thẩm mỹ, tạo nên trải nghiệm quà tặng đáng nhớ.',
-        ctaText: 'Xem bộ sưu tập',
-        ctaLink: '/products',
-        image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=800&q=80',
-        stats: [
-            { value: '50+', label: 'Set quà độc quyền' },
-            { value: '5★', label: 'Đánh giá trung bình' },
-            { value: '99%', label: 'Khách hàng quay lại' }
-        ]
-    }
-];
-
 const Content = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -75,9 +33,47 @@ const Content = () => {
     const [categoryImages, setCategoryImages] = useState({});
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(true);
+    const [addingToCartId, setAddingToCartId] = useState(null);
+    const [sliders, setSliders] = useState([]);
+    const [slidersLoading, setSlidersLoading] = useState(true);
+    const [contactFormData, setContactFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        message: ''
+    });
+    const [contactLoading, setContactLoading] = useState(false);
+    const [contactSuccess, setContactSuccess] = useState(false);
+    const [contactError, setContactError] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
     const { token, loading: authLoading } = useContext(AuthContext);
+
+    // Fetch sliders
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchSliders = async () => {
+            try {
+                setSlidersLoading(true);
+                const response = await axios.get('http://localhost:8000/api/sliders');
+                if (!isMounted) return;
+                const slidersList = Array.isArray(response.data) ? response.data : [];
+                setSliders(slidersList);
+            } catch (err) {
+                if (!isMounted) return;
+                console.error('Error fetching sliders:', err);
+                setSliders([]);
+            } finally {
+                if (isMounted) setSlidersLoading(false);
+            }
+        };
+
+        fetchSliders();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -232,7 +228,7 @@ const Content = () => {
     const handleViewDetail = (id) => navigate(`/products/${id}`);
 
     const handleAddToCart = async (product) => {
-        if (authLoading) {
+        if (authLoading || addingToCartId === product.id) {
             return;
         }
         
@@ -252,15 +248,23 @@ const Content = () => {
         }
 
         try {
+            setAddingToCartId(product.id);
             await axios.post(
                 "http://localhost:8000/api/cart/add",
                 { product_id: product.id, quantity: 1 },
                 { headers: { Authorization: `Bearer ${currentToken}` } }
             );
-            alert("✅ Đã thêm vào giỏ hàng!");
+            
+            // Hiển thị thông báo và tùy chọn đi đến giỏ hàng
+            const goToCart = window.confirm("✅ Đã thêm vào giỏ hàng!\n\nBạn có muốn xem giỏ hàng không?");
+            if (goToCart) {
+                navigate('/cart');
+            }
         } catch (err) {
             console.error("Add to cart error:", err);
             alert("❌ Lỗi khi thêm vào giỏ hàng: " + (err.response?.data?.message || err.message));
+        } finally {
+            setAddingToCartId(null);
         }
     };
 
@@ -289,6 +293,27 @@ const Content = () => {
                         </>
                     )}
                 </div>
+                <div className="product-card__actions">
+                    <button
+                        className="product-card__btn product-card__btn--outline"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(product.id);
+                        }}
+                    >
+                        Chi tiết
+                    </button>
+                    <button
+                        className="product-card__btn product-card__btn--primary"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(product);
+                        }}
+                        disabled={addingToCartId === product.id}
+                    >
+                        {addingToCartId === product.id ? 'Đang thêm...' : 'Thêm vào giỏ'}
+                    </button>
+                </div>
             </div>
         </article>
     );
@@ -309,7 +334,39 @@ const Content = () => {
             {/* Hero Section - Slider */}
             <section className="home-hero">
                 <div className="container">
-                    <HeroSlider slides={HERO_SLIDES} autoPlayInterval={5000} />
+                    {slidersLoading ? (
+                        <div style={{ 
+                            height: '700px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, rgba(251, 99, 118, 0.1), rgba(252, 177, 166, 0.1))',
+                            borderRadius: '16px'
+                        }}>
+                            <div className="loading-spinner" style={{ 
+                                width: '50px', 
+                                height: '50px', 
+                                border: '4px solid rgba(251, 99, 118, 0.2)', 
+                                borderTopColor: '#FB6376', 
+                                borderRadius: '50%', 
+                                animation: 'spin 1s linear infinite'
+                            }}></div>
+                        </div>
+                    ) : sliders.length > 0 ? (
+                        <HeroSlider slides={sliders} autoPlayInterval={5000} />
+                    ) : (
+                        <div style={{ 
+                            height: '700px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, rgba(251, 99, 118, 0.1), rgba(252, 177, 166, 0.1))',
+                            borderRadius: '16px',
+                            color: '#666'
+                        }}>
+                            Chưa có slider nào được thiết lập
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -424,21 +481,351 @@ const Content = () => {
                 </div>
             </section>
 
-            {/* Newsletter */}
-            <section className="newsletter">
+            {/* Contact Form Section */}
+            <section className="newsletter" style={{ background: 'linear-gradient(135deg, #5D2A42, #8B4A5C)' }}>
                 <div className="container">
-                    <div className="newsletter-card">
-                        <div className="newsletter-content">
-                            <h2>STAY UPTO DATE ABOUT OUR LATEST OFFERS</h2>
+                    <div className="newsletter-card" style={{ 
+                        background: 'rgba(255, 255, 255, 0.95)', 
+                        borderRadius: '20px',
+                        padding: '3rem 2rem',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+                    }}>
+                        <div className="newsletter-content" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                            <h2 style={{ 
+                                color: '#5D2A42', 
+                                fontSize: '2rem', 
+                                fontWeight: 700,
+                                marginBottom: '1rem'
+                            }}>
+                                LIÊN HỆ VỚI CHÚNG TÔI
+                            </h2>
+                            <p style={{ color: '#666', fontSize: '1rem' }}>
+                                Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn
+                            </p>
                         </div>
+                        {contactSuccess && (
+                            <div style={{
+                                padding: '1rem',
+                                marginBottom: '1.5rem',
+                                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(129, 199, 132, 0.1))',
+                                border: '2px solid #4CAF50',
+                                borderRadius: '10px',
+                                color: '#2E7D32',
+                                textAlign: 'center',
+                                fontWeight: 600
+                            }}>
+                                ✓ Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.
+                            </div>
+                        )}
+                        {contactError && (
+                            <div style={{
+                                padding: '1rem',
+                                marginBottom: '1.5rem',
+                                background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(239, 154, 154, 0.1))',
+                                border: '2px solid #F44336',
+                                borderRadius: '10px',
+                                color: '#C62828',
+                                textAlign: 'center',
+                                fontWeight: 600
+                            }}>
+                                ✗ {contactError}
+                            </div>
+                        )}
                         <form
                             className="newsletter-form"
-                            onSubmit={(e) => {
+                            onSubmit={async (e) => {
                                 e.preventDefault();
+                                setContactLoading(true);
+                                setContactError('');
+                                setContactSuccess(false);
+
+                                try {
+                                    const currentToken = token || localStorage.getItem('token');
+                                    const headers = currentToken ? {
+                                        'Authorization': `Bearer ${currentToken}`,
+                                        'Content-Type': 'application/json'
+                                    } : {
+                                        'Content-Type': 'application/json'
+                                    };
+
+                                    const response = await axios.post(
+                                        'http://localhost:8000/api/contact',
+                                        contactFormData,
+                                        { headers }
+                                    );
+
+                                    if (response.data.success) {
+                                        setContactSuccess(true);
+                                        setContactFormData({
+                                            name: '',
+                                            email: '',
+                                            phone: '',
+                                            message: ''
+                                        });
+                                        setTimeout(() => setContactSuccess(false), 5000);
+                                    }
+                                } catch (err) {
+                                    if (err.response?.data?.errors) {
+                                        const errors = err.response.data.errors;
+                                        const firstError = Object.values(errors)[0][0];
+                                        setContactError(firstError);
+                                    } else {
+                                        setContactError(err.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
+                                    }
+                                } finally {
+                                    setContactLoading(false);
+                                }
                             }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
                         >
-                            <input type="email" placeholder="Enter your email" required />
-                            <button type="submit">Subscribe to Newsletter</button>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '0.5rem',
+                                        color: '#5D2A42',
+                                        fontWeight: 600,
+                                        fontSize: '0.95rem'
+                                    }}>
+                                        Họ và tên *
+                                    </label>
+                                    <div style={{ position: 'relative' }}>
+                                        <FaUser style={{ 
+                                            position: 'absolute', 
+                                            left: '1rem', 
+                                            top: '50%', 
+                                            transform: 'translateY(-50%)',
+                                            color: '#5D2A42',
+                                            opacity: 0.6,
+                                            pointerEvents: 'none',
+                                            zIndex: 1
+                                        }} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Nhập họ và tên của bạn" 
+                                            required
+                                            name="name"
+                                            value={contactFormData.name}
+                                            onChange={(e) => setContactFormData({...contactFormData, name: e.target.value})}
+                                            disabled={contactLoading}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.9rem 1rem 0.9rem 2.8rem',
+                                                border: '2px solid rgba(93, 42, 66, 0.2)',
+                                                borderRadius: '12px',
+                                                fontSize: '1rem',
+                                                outline: 'none',
+                                                transition: 'all 0.3s ease',
+                                                background: '#fff',
+                                                color: '#333',
+                                                boxSizing: 'border-box'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = '#FB6376';
+                                                e.target.style.boxShadow = '0 0 0 3px rgba(251, 99, 118, 0.1)';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = 'rgba(93, 42, 66, 0.2)';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ position: 'relative' }}>
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '0.5rem',
+                                        color: '#5D2A42',
+                                        fontWeight: 600,
+                                        fontSize: '0.95rem'
+                                    }}>
+                                        Email *
+                                    </label>
+                                    <div style={{ position: 'relative' }}>
+                                        <FaEnvelope style={{ 
+                                            position: 'absolute', 
+                                            left: '1rem', 
+                                            top: '50%', 
+                                            transform: 'translateY(-50%)',
+                                            color: '#5D2A42',
+                                            opacity: 0.6,
+                                            pointerEvents: 'none',
+                                            zIndex: 1
+                                        }} />
+                                        <input 
+                                            type="email" 
+                                            placeholder="Nhập email của bạn" 
+                                            required
+                                            name="email"
+                                            value={contactFormData.email}
+                                            onChange={(e) => setContactFormData({...contactFormData, email: e.target.value})}
+                                            disabled={contactLoading}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.9rem 1rem 0.9rem 2.8rem',
+                                                border: '2px solid rgba(93, 42, 66, 0.2)',
+                                                borderRadius: '12px',
+                                                fontSize: '1rem',
+                                                outline: 'none',
+                                                transition: 'all 0.3s ease',
+                                                background: '#fff',
+                                                color: '#333',
+                                                boxSizing: 'border-box'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = '#FB6376';
+                                                e.target.style.boxShadow = '0 0 0 3px rgba(251, 99, 118, 0.1)';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = 'rgba(93, 42, 66, 0.2)';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    color: '#5D2A42',
+                                    fontWeight: 600,
+                                    fontSize: '0.95rem'
+                                }}>
+                                    Số điện thoại <span style={{ color: '#999', fontWeight: 400 }}>(tùy chọn)</span>
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <FaPhone style={{ 
+                                        position: 'absolute', 
+                                        left: '1rem', 
+                                        top: '50%', 
+                                        transform: 'translateY(-50%)',
+                                        color: '#5D2A42',
+                                        opacity: 0.6,
+                                        pointerEvents: 'none',
+                                        zIndex: 1
+                                    }} />
+                                    <input 
+                                        type="tel" 
+                                        placeholder="Nhập số điện thoại của bạn"
+                                        name="phone"
+                                        value={contactFormData.phone}
+                                        onChange={(e) => setContactFormData({...contactFormData, phone: e.target.value})}
+                                        disabled={contactLoading}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.9rem 1rem 0.9rem 2.8rem',
+                                            border: '2px solid rgba(93, 42, 66, 0.2)',
+                                            borderRadius: '12px',
+                                            fontSize: '1rem',
+                                            outline: 'none',
+                                            transition: 'all 0.3s ease',
+                                            background: '#fff',
+                                            color: '#333',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = '#FB6376';
+                                            e.target.style.boxShadow = '0 0 0 3px rgba(251, 99, 118, 0.1)';
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = 'rgba(93, 42, 66, 0.2)';
+                                            e.target.style.boxShadow = 'none';
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '0.5rem',
+                                    color: '#5D2A42',
+                                    fontWeight: 600,
+                                    fontSize: '0.95rem'
+                                }}>
+                                    Tin nhắn *
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <FaComment style={{ 
+                                        position: 'absolute', 
+                                        left: '1rem', 
+                                        top: '1.2rem',
+                                        color: '#5D2A42',
+                                        opacity: 0.6,
+                                        pointerEvents: 'none',
+                                        zIndex: 1
+                                    }} />
+                                    <textarea 
+                                        placeholder="Nhập tin nhắn của bạn..." 
+                                        required
+                                        name="message"
+                                        rows="5"
+                                        value={contactFormData.message}
+                                        onChange={(e) => setContactFormData({...contactFormData, message: e.target.value})}
+                                        disabled={contactLoading}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.9rem 1rem 0.9rem 2.8rem',
+                                            border: '2px solid rgba(93, 42, 66, 0.2)',
+                                            borderRadius: '12px',
+                                            fontSize: '1rem',
+                                            outline: 'none',
+                                            transition: 'all 0.3s ease',
+                                            resize: 'vertical',
+                                            fontFamily: 'inherit',
+                                            background: '#fff',
+                                            color: '#333',
+                                            boxSizing: 'border-box',
+                                            minHeight: '120px'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = '#FB6376';
+                                            e.target.style.boxShadow = '0 0 0 3px rgba(251, 99, 118, 0.1)';
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = 'rgba(93, 42, 66, 0.2)';
+                                            e.target.style.boxShadow = 'none';
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <button 
+                                type="submit" 
+                                disabled={contactLoading}
+                                style={{
+                                    width: '100%',
+                                    padding: '1.1rem 2rem',
+                                    background: contactLoading 
+                                        ? 'linear-gradient(135deg, #ccc, #999)' 
+                                        : 'linear-gradient(135deg, #FB6376, #FCB1A6)',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    color: 'white',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 600,
+                                    cursor: contactLoading ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: contactLoading 
+                                        ? 'none' 
+                                        : '0 4px 20px rgba(251, 99, 118, 0.4)',
+                                    opacity: contactLoading ? 0.7 : 1,
+                                    marginTop: '0.5rem'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!contactLoading) {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 6px 25px rgba(251, 99, 118, 0.5)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!contactLoading) {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(251, 99, 118, 0.4)';
+                                    }
+                                }}
+                            >
+                                {contactLoading ? 'Đang gửi...' : 'Gửi tin nhắn'}
+                            </button>
                         </form>
                     </div>
                 </div>

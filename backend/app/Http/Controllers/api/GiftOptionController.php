@@ -100,14 +100,15 @@ class GiftOptionController extends Controller
     {
         $paper = WrappingPaper::findOrFail($id);
         
-        // Xử lý is_active trước khi validate (FormData gửi string)
-        $isActive = $request->input('is_active');
-        if ($isActive !== null) {
-            $request->merge([
-                'is_active' => filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true)
-            ]);
+        // Đảm bảo các trường bắt buộc có giá trị trước khi validate
+        if (!$request->has('name') || empty(trim($request->input('name')))) {
+            $request->merge(['name' => $paper->name]);
+        }
+        if (!$request->has('quantity')) {
+            $request->merge(['quantity' => $paper->quantity]);
         }
         
+        // Validate dữ liệu
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -130,15 +131,33 @@ class GiftOptionController extends Controller
             $validated['image_url'] = asset('storage/' . $path);
         }
 
-        // Đảm bảo is_active là boolean (giữ nguyên giá trị hiện tại nếu null)
-        if (!isset($validated['is_active'])) {
+        // Xử lý is_active (FormData gửi string)
+        $isActive = $request->input('is_active');
+        if ($isActive !== null) {
+            $validated['is_active'] = filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true);
+        } else {
             $validated['is_active'] = $paper->is_active;
         }
 
-        // Xóa trường image khỏi validated
+        // Xóa trường image khỏi validated (không lưu vào DB)
         unset($validated['image']);
 
-        $paper->update($validated);
+        // Update trực tiếp từ request để đảm bảo tất cả các trường được cập nhật
+        $updateData = [
+            'name' => $request->input('name') ?: $paper->name,
+            'description' => $request->has('description') ? ($request->input('description') ?: null) : $paper->description,
+            'quantity' => $request->has('quantity') ? (int)$request->input('quantity') : $paper->quantity,
+            'price' => $request->has('price') ? (float)$request->input('price') : $paper->price,
+            'is_active' => $validated['is_active'],
+        ];
+        
+        // Chỉ update image_url nếu có ảnh mới
+        if (isset($validated['image_url'])) {
+            $updateData['image_url'] = $validated['image_url'];
+        }
+        
+        $paper->update($updateData);
+        
         return response()->json($paper);
     }
 
@@ -198,14 +217,15 @@ class GiftOptionController extends Controller
     {
         $accessory = DecorativeAccessory::findOrFail($id);
         
-        // Xử lý is_active trước khi validate (FormData gửi string)
-        $isActive = $request->input('is_active');
-        if ($isActive !== null) {
-            $request->merge([
-                'is_active' => filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true)
-            ]);
+        // Đảm bảo các trường bắt buộc có giá trị trước khi validate
+        if (!$request->has('name') || empty(trim($request->input('name')))) {
+            $request->merge(['name' => $accessory->name]);
+        }
+        if (!$request->has('quantity')) {
+            $request->merge(['quantity' => $accessory->quantity]);
         }
         
+        // Validate dữ liệu
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -228,15 +248,33 @@ class GiftOptionController extends Controller
             $validated['image_url'] = asset('storage/' . $path);
         }
 
-        // Đảm bảo is_active là boolean (giữ nguyên giá trị hiện tại nếu null)
-        if (!isset($validated['is_active'])) {
+        // Xử lý is_active (FormData gửi string)
+        $isActive = $request->input('is_active');
+        if ($isActive !== null) {
+            $validated['is_active'] = filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true);
+        } else {
             $validated['is_active'] = $accessory->is_active;
         }
 
-        // Xóa trường image khỏi validated
+        // Xóa trường image khỏi validated (không lưu vào DB)
         unset($validated['image']);
 
-        $accessory->update($validated);
+        // Update trực tiếp từ request để đảm bảo tất cả các trường được cập nhật
+        $updateData = [
+            'name' => $request->input('name') ?: $accessory->name,
+            'description' => $request->has('description') ? ($request->input('description') ?: null) : $accessory->description,
+            'quantity' => $request->has('quantity') ? (int)$request->input('quantity') : $accessory->quantity,
+            'price' => $request->has('price') ? (float)$request->input('price') : $accessory->price,
+            'is_active' => $validated['is_active'],
+        ];
+        
+        // Chỉ update image_url nếu có ảnh mới
+        if (isset($validated['image_url'])) {
+            $updateData['image_url'] = $validated['image_url'];
+        }
+        
+        $accessory->update($updateData);
+        
         return response()->json($accessory);
     }
 
@@ -296,14 +334,15 @@ class GiftOptionController extends Controller
     {
         $card = CardType::findOrFail($id);
         
-        // Xử lý is_active trước khi validate (FormData gửi string)
-        $isActive = $request->input('is_active');
-        if ($isActive !== null) {
-            $request->merge([
-                'is_active' => filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true)
-            ]);
+        // Đảm bảo các trường bắt buộc có giá trị trước khi validate
+        if (!$request->has('name') || empty(trim($request->input('name')))) {
+            $request->merge(['name' => $card->name]);
+        }
+        if (!$request->has('quantity')) {
+            $request->merge(['quantity' => $card->quantity]);
         }
         
+        // Validate dữ liệu
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -326,15 +365,33 @@ class GiftOptionController extends Controller
             $validated['image_url'] = asset('storage/' . $path);
         }
 
-        // Đảm bảo is_active là boolean (giữ nguyên giá trị hiện tại nếu null)
-        if (!isset($validated['is_active'])) {
+        // Xử lý is_active (FormData gửi string)
+        $isActive = $request->input('is_active');
+        if ($isActive !== null) {
+            $validated['is_active'] = filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? ($isActive === 'true' || $isActive === '1' || $isActive === 1 || $isActive === true);
+        } else {
             $validated['is_active'] = $card->is_active;
         }
 
-        // Xóa trường image khỏi validated
+        // Xóa trường image khỏi validated (không lưu vào DB)
         unset($validated['image']);
 
-        $card->update($validated);
+        // Update trực tiếp từ request để đảm bảo tất cả các trường được cập nhật
+        $updateData = [
+            'name' => $request->input('name') ?: $card->name,
+            'description' => $request->has('description') ? ($request->input('description') ?: null) : $card->description,
+            'quantity' => $request->has('quantity') ? (int)$request->input('quantity') : $card->quantity,
+            'price' => $request->has('price') ? (float)$request->input('price') : $card->price,
+            'is_active' => $validated['is_active'],
+        ];
+        
+        // Chỉ update image_url nếu có ảnh mới
+        if (isset($validated['image_url'])) {
+            $updateData['image_url'] = $validated['image_url'];
+        }
+        
+        $card->update($updateData);
+        
         return response()->json($card);
     }
 

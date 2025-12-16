@@ -2,6 +2,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import Home from './components/frontend/pages/Home';
 import About from './components/frontend/pages/About';
+import Contact from './components/frontend/pages/Contact';
 import Login from './components/frontend/pages/Login';
 import Register from './components/frontend/pages/Register';
 import VerifyEmail from './components/frontend/pages/VerifyEmail';
@@ -47,6 +48,8 @@ import AdminPromotionUsage from './components/admin/pages/AdminPromotionUsage';
 import AdminReferral from './components/admin/pages/AdminReferral';
 import AdminGiftOptions from './components/admin/pages/AdminGiftOptions';
 import AdminReturnRequests from './components/admin/pages/AdminReturnRequests';
+import AdminContactMessages from './components/admin/pages/AdminContactMessages';
+import AdminSliders from './components/admin/pages/AdminSliders';
 import FloatingProductChatButton from './components/Chat/FloatingProductChatButton';
 
 function App() {
@@ -58,6 +61,7 @@ function App() {
           {/* Frontend */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -123,6 +127,8 @@ function App() {
           <Route path="/admin/orders" element={<AdminOrder />} />
           <Route path="/admin/gift-options" element={<AdminGiftOptions />} />
           <Route path="/admin/returns" element={<AdminReturnRequests />} />
+          <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
+          <Route path="/admin/sliders" element={<AdminSliders />} />
 
           <Route path="/admin/promotions" element={<AdminPromotions />} />
           <Route path="/admin/promotions/edit/:id" element={<AdminEditPromotion />} />

@@ -3,58 +3,64 @@ import { useNavigate } from 'react-router-dom';
 
 const HeroSlider = ({ slides = [], autoPlayInterval = 5000 }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const intervalRef = useRef(null);
     const navigate = useNavigate();
 
-    // Auto-play functionality - tự động chuyển slide mỗi 5 giây
+    // Auto-play functionality
     useEffect(() => {
-        // Clear interval cũ nếu có
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
 
-        // Chỉ start auto-play nếu có nhiều hơn 1 slide
         if (slides.length > 1) {
             intervalRef.current = setInterval(() => {
-                setCurrentSlide((prev) => (prev + 1) % slides.length);
+                nextSlide();
             }, autoPlayInterval);
         }
 
-        // Cleanup khi unmount hoặc khi dependencies thay đổi
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [slides.length, autoPlayInterval]);
+    }, [slides.length, autoPlayInterval, currentSlide]);
 
     const goToSlide = (index) => {
+        if (index === currentSlide || isTransitioning) return;
+        
+        setIsTransitioning(true);
         setCurrentSlide(index);
-        // Reset interval khi người dùng tương tác thủ công
+        
+        // Reset transition flag after animation
+        setTimeout(() => {
+            setIsTransitioning(false);
+        }, 800);
+        
+        // Reset interval
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
-        // Tiếp tục auto-play sau khi chuyển slide
         if (slides.length > 1) {
             intervalRef.current = setInterval(() => {
-                setCurrentSlide((prev) => (prev + 1) % slides.length);
+                nextSlide();
             }, autoPlayInterval);
         }
     };
 
     const nextSlide = () => {
+        if (isTransitioning) return;
         goToSlide((currentSlide + 1) % slides.length);
     };
 
     const prevSlide = () => {
+        if (isTransitioning) return;
         goToSlide((currentSlide - 1 + slides.length) % slides.length);
     };
 
     if (!slides || slides.length === 0) {
         return null;
     }
-
-    const currentSlideData = slides[currentSlide];
 
     return (
         <div className="hero-slider">
@@ -79,43 +85,29 @@ const HeroSlider = ({ slides = [], autoPlayInterval = 5000 }) => {
                     </>
                 )}
 
-                {/* Slide Content */}
-                <div className="hero-slider__slide">
-                    <div className="hero-grid">
-                        <div className="hero-content">
-                            {currentSlideData.title && (
-                                <h1 className="hero-title">{currentSlideData.title}</h1>
-                            )}
-                            {currentSlideData.description && (
-                                <p className="hero-description">{currentSlideData.description}</p>
-                            )}
-                            {currentSlideData.ctaText && currentSlideData.ctaLink && (
-                                <button
-                                    className="hero-cta"
-                                    onClick={() => navigate(currentSlideData.ctaLink)}
-                                >
-                                    {currentSlideData.ctaText}
-                                </button>
-                            )}
-                            {currentSlideData.stats && (
-                                <div className="hero-stats">
-                                    {currentSlideData.stats.map((stat, index) => (
-                                        <div key={index} className="stat-item">
-                                            <strong>{stat.value}</strong>
-                                            <span>{stat.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="hero-image">
-                            <img
-                                src={currentSlideData.image || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80'}
-                                alt={currentSlideData.title || 'Hero'}
-                                loading="eager"
-                            />
-                        </div>
-                    </div>
+                {/* Slides Container */}
+                <div className="hero-slider__slides-wrapper">
+                    {slides.map((slide, index) => {
+                        const isActive = index === currentSlide;
+                        const slideClass = `hero-slider__slide-item ${isActive ? 'active' : ''} ${
+                            index < currentSlide ? 'prev' : index > currentSlide ? 'next' : ''
+                        }`;
+                        
+                        return (
+                            <div
+                                key={slide.id || index}
+                                className={slideClass}
+                                onClick={() => slide.link && navigate(slide.link)}
+                                style={{ cursor: slide.link ? 'pointer' : 'default' }}
+                            >
+                                <img
+                                    src={slide.image_url || slide.image || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80'}
+                                    alt={slide.title || `Slide ${index + 1}`}
+                                    loading={isActive ? 'eager' : 'lazy'}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Dots Indicator */}
@@ -137,4 +129,3 @@ const HeroSlider = ({ slides = [], autoPlayInterval = 5000 }) => {
 };
 
 export default HeroSlider;
-
