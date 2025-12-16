@@ -29,6 +29,13 @@ class UserAddressController extends Controller
 
         $validated['user_id'] = $user_id;
 
+        // Nếu đặt làm mặc định, bỏ mặc định của các địa chỉ khác
+        if (isset($validated['is_default']) && $validated['is_default']) {
+            UserAddress::where('user_id', $user_id)
+                ->where('is_default', true)
+                ->update(['is_default' => false]);
+        }
+
         $address = UserAddress::create($validated);
 
         return response()->json($address, 201);
@@ -54,6 +61,14 @@ class UserAddressController extends Controller
             'country' => 'required|string|max:100',
             'is_default' => 'nullable|boolean',
         ]);
+
+        // Nếu đặt làm mặc định, bỏ mặc định của các địa chỉ khác
+        if (isset($validated['is_default']) && $validated['is_default']) {
+            UserAddress::where('user_id', $user_id)
+                ->where('address_id', '!=', $id)
+                ->where('is_default', true)
+                ->update(['is_default' => false]);
+        }
 
         $address->update($validated);
 

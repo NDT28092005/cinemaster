@@ -234,14 +234,50 @@ export default function AddAddress() {
                     fontWeight: 600,
                     marginBottom: '0.5rem'
                   }}>
-                    Địa chỉ bổ sung (tùy chọn)
+                    Phường/Xã <span style={{ color: '#FB6376' }}>*</span>
                   </Form.Label>
                   <Form.Control
                     type="text"
                     name="address_line2"
-                    placeholder="Ví dụ: Tầng 5, Phòng 501"
+                    placeholder="Ví dụ: Phường 1, Phường Hải Châu"
                     value={form.address_line2}
                     onChange={handleChange}
+                    required
+                    style={{
+                      borderRadius: '15px',
+                      border: '2px solid rgba(251, 99, 118, 0.2)',
+                      fontSize: '0.95rem',
+                      padding: '0.85rem 1.2rem',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#FB6376';
+                      e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label style={{
+                    color: '#5D2A42',
+                    fontWeight: 600,
+                    marginBottom: '0.5rem'
+                  }}>
+                    Tỉnh <span style={{ color: '#FB6376' }}>*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="state"
+                    placeholder="Ví dụ: Đà Nẵng"
+                    value={form.state}
+                    onChange={handleChange}
+                    required
                     style={{
                       borderRadius: '15px',
                       border: '2px solid rgba(251, 99, 118, 0.2)',
@@ -273,43 +309,8 @@ export default function AddAddress() {
                   <Form.Control
                     type="text"
                     name="city"
-                    placeholder="Ví dụ: Đà Nẵng"
-                    value={form.city}
-                    onChange={handleChange}
-                    required
-                    style={{
-                      borderRadius: '15px',
-                      border: '2px solid rgba(251, 99, 118, 0.2)',
-                      fontSize: '0.95rem',
-                      padding: '0.85rem 1.2rem',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#FB6376';
-                      e.target.style.boxShadow = '0 4px 15px rgba(251, 99, 118, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(251, 99, 118, 0.2)';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label style={{
-                    color: '#5D2A42',
-                    fontWeight: 600,
-                    marginBottom: '0.5rem'
-                  }}>
-                    Xã / Quận <span style={{ color: '#FB6376' }}>*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="state"
                     placeholder="Ví dụ: Quận Hải Châu"
-                    value={form.state}
+                    value={form.city}
                     onChange={handleChange}
                     required
                     style={{

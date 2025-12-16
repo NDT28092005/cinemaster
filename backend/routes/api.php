@@ -28,6 +28,21 @@ use App\Http\Controllers\Api\GiftOptionController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\GiftPreviewController;
 use App\Http\Controllers\Api\ReturnController;
+use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\SliderController;
+
+// Sliders - Public endpoint (lấy danh sách sliders active)
+Route::get('/sliders', [SliderController::class, 'index']);
+
+// Contact form - public endpoint (không cần đăng nhập)
+Route::post('/contact', [ContactController::class, 'store']);
+
+// Admin routes for contact messages
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/contact-messages', [ContactController::class, 'index']);
+    Route::put('/admin/contact-messages/{id}/read', [ContactController::class, 'markAsRead']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     // Product chatbot endpoints với auth
     Route::post('/chat/product-chatbot/start', [ChatController::class, 'startProductChat']);
@@ -187,23 +202,35 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/returns')->group(fun
     Route::post('/{id}/refund', [ReturnController::class, 'refund']); // Hoàn tiền
 });
 
+// Sliders - Admin endpoints
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/sliders')->group(function () {
+    Route::get('/', [SliderController::class, 'adminIndex']);
+    Route::post('/', [SliderController::class, 'store']);
+    Route::get('/{slider}', [SliderController::class, 'show']);
+    Route::put('/{slider}', [SliderController::class, 'update']);
+    Route::delete('/{slider}', [SliderController::class, 'destroy']);
+});
+
 // Gift Options - Admin endpoints
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin/gift-options')->group(function () {
     // Wrapping Papers
     Route::get('/wrapping-papers', [GiftOptionController::class, 'indexWrappingPapers']);
     Route::post('/wrapping-papers', [GiftOptionController::class, 'storeWrappingPaper']);
+    Route::post('/wrapping-papers/{id}', [GiftOptionController::class, 'updateWrappingPaper']);
     Route::put('/wrapping-papers/{id}', [GiftOptionController::class, 'updateWrappingPaper']);
     Route::delete('/wrapping-papers/{id}', [GiftOptionController::class, 'destroyWrappingPaper']);
     
     // Decorative Accessories
     Route::get('/decorative-accessories', [GiftOptionController::class, 'indexDecorativeAccessories']);
     Route::post('/decorative-accessories', [GiftOptionController::class, 'storeDecorativeAccessory']);
+    Route::post('/decorative-accessories/{id}', [GiftOptionController::class, 'updateDecorativeAccessory']);
     Route::put('/decorative-accessories/{id}', [GiftOptionController::class, 'updateDecorativeAccessory']);
     Route::delete('/decorative-accessories/{id}', [GiftOptionController::class, 'destroyDecorativeAccessory']);
     
     // Card Types
     Route::get('/card-types', [GiftOptionController::class, 'indexCardTypes']);
     Route::post('/card-types', [GiftOptionController::class, 'storeCardType']);
+    Route::post('/card-types/{id}', [GiftOptionController::class, 'updateCardType']);
     Route::put('/card-types/{id}', [GiftOptionController::class, 'updateCardType']);
     Route::delete('/card-types/{id}', [GiftOptionController::class, 'destroyCardType']);
 });

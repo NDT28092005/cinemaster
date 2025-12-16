@@ -9,9 +9,11 @@ import {
   Gift, 
   Star, 
   ShoppingCart,
+  Mail,
   LogOut,
   Menu,
-  X
+  X,
+  Image
 } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
@@ -36,6 +38,8 @@ const AdminLayout = ({ children }) => {
     { icon: Star, label: 'Đánh giá', path: '/admin/reviews' },
     { icon: ShoppingCart, label: 'Đơn hàng', path: '/admin/orders' },
     { icon: Gift, label: 'Quà tặng', path: '/admin/gift-options' },
+    { icon: Image, label: 'Slider', path: '/admin/sliders' },
+    { icon: Mail, label: 'Liên hệ', path: '/admin/contact-messages' },
   ];
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');

@@ -1851,4 +1851,54 @@
   gap: 0.5rem;
 }
 
+// Address Item Actions
+.address-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 1rem;
+}
+
+.address-edit-button,
+.address-delete-button {
+  padding: 0.5rem;
+  min-width: auto;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  color: #666;
+  border: none;
+  background: transparent;
+
+  &:hover {
+    background: rgba(251, 99, 118, 0.1);
+    color: #FB6376;
+    transform: scale(1.1);
+  }
+
+  svg {
+    font-size: 1rem;
+  }
+}
+
+.address-delete-button {
+  &:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+  }
+}
+
+// Update address-item to use flexbox for actions
+.address-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 

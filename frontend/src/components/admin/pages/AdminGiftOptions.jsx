@@ -149,6 +149,13 @@ export default function AdminGiftOptions() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Kiểm tra các trường bắt buộc trước khi submit
+    if (!formData.name || !formData.name.trim()) {
+      alert('Vui lòng nhập tên');
+      return;
+    }
+    
     try {
       const token = getToken();
       if (!token) {
@@ -163,14 +170,25 @@ export default function AdminGiftOptions() {
         ? `http://localhost:8000/api/admin/gift-options/${activeTab}/${editing}`
         : `http://localhost:8000/api/admin/gift-options/${activeTab}`;
       
-      const method = editing ? 'put' : 'post';
+      // Dùng POST thay vì PUT để tránh lỗi với FormData
+      const method = 'post';
       
       // Tạo FormData để upload file
       const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name.trim());
-      formDataToSend.append('description', formData.description?.trim() || '');
-      formDataToSend.append('quantity', parseInt(formData.quantity) || 0);
-      formDataToSend.append('price', parseFloat(formData.price) || 0);
+      
+      // Đảm bảo tất cả các trường được gửi đúng cách
+      const nameValue = (formData.name || '').trim();
+      if (!nameValue) {
+        alert('Vui lòng nhập tên');
+        setUploading(false);
+        return;
+      }
+      
+      formDataToSend.append('name', nameValue);
+      formDataToSend.append('description', (formData.description || '').trim());
+      formDataToSend.append('quantity', String(parseInt(formData.quantity) || 0));
+      formDataToSend.append('price', String(parseFloat(formData.price) || 0));
+      
       // Gửi is_active dưới dạng "1" hoặc "0" string để backend xử lý
       const isActiveValue = formData.is_active === true || formData.is_active === 'true' || formData.is_active === 1 || formData.is_active === '1';
       formDataToSend.append('is_active', isActiveValue ? '1' : '0');
@@ -182,10 +200,14 @@ export default function AdminGiftOptions() {
       }
       
       console.log('Sending data:', {
-        name: formData.name,
+        name: nameValue,
+        quantity: formData.quantity,
+        price: formData.price,
+        is_active: isActiveValue,
         hasImageFile: !!imageFile
       });
       console.log('Endpoint:', endpoint);
+      console.log('Method:', method);
       
       const response = await axios[method](endpoint, formDataToSend, {
         headers: { 

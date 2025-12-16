@@ -172,6 +172,18 @@ const Header = () => {
                                 >
                                     Giới thiệu
                                 </Nav.Link>
+                                
+                                <Nav.Link 
+                                    as={Link} 
+                                    to="/contact" 
+                                    className="nav-link"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate('/contact');
+                                    }}
+                                >
+                                    Liên hệ
+                                </Nav.Link>
                             </Nav>
                         </Navbar.Collapse>
 
